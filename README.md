@@ -4,6 +4,9 @@
 
 AIPM syncs issues from **Jira** and **GitHub** into a local git-tracked directory of Markdown files. It then uses **GitHub Copilot** (with graceful fallback) to summarize changes, update project plans, and generate reports — all from the command line.
 
+> **New here?** Start with the [Tutorial](doc/tutorial.md) — it walks you through setup, tickets, horizons, and daily workflow.\
+> For the planning concept in depth, see [Planning & Time Horizons](doc/planning.md).
+
 ---
 
 ## Features
@@ -185,7 +188,8 @@ my-project/
 ├── goals.md           # Project goals
 ├── generated/         # Generated reports (plan, kanban, etc.)
 ├── doc/               # Documentation
-│   └── planning.md    # Planning concept and horizon reference
+│   ├── planning.md    # Planning concept and horizon reference
+│   └── tutorial.md    # Getting started tutorial
 └── README.md          # Project summary
 ```
 
