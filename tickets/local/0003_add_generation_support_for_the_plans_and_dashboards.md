@@ -3,6 +3,7 @@
 | Field | Value |
 |-------|-------|
 | **Status** | open |
+| **Horizon** | week |
 | **Assignee** | claude |
 | **Priority** | high |
 | **Source** | local |

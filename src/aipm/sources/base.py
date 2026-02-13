@@ -22,6 +22,8 @@ class Ticket:
     url: str = ""
     source_type: str = ""
     source_name: str = ""
+    horizon: str = "sometime"
+    due: str = ""
     extra_fields: dict[str, str] | None = None
 
 

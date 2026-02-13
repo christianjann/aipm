@@ -9,25 +9,24 @@ from rich.console import Console
 from rich.markdown import Markdown
 
 from aipm.config import ProjectConfig, get_project_root
+from aipm.horizons import HORIZON_LABELS, HORIZONS, horizon_sort_key
 
 console = Console()
 
 
-def _collect_ticket_data(project_root: Path) -> dict[str, list[dict[str, str]]]:
-    """Read all ticket files and group by status."""
+def _collect_ticket_data(project_root: Path) -> list[dict[str, str]]:
+    """Read all ticket files and return parsed metadata."""
     tickets_dir = project_root / "tickets"
     if not tickets_dir.exists():
-        return {}
+        return []
 
-    by_status: dict[str, list[dict[str, str]]] = {}
-
+    tickets: list[dict[str, str]] = []
     for md_file in tickets_dir.rglob("*.md"):
         content = md_file.read_text()
         ticket_info = _parse_ticket_md(content, md_file)
-        status = ticket_info.get("status", "unknown").lower()
-        by_status.setdefault(status, []).append(ticket_info)
+        tickets.append(ticket_info)
 
-    return by_status
+    return tickets
 
 
 def _parse_ticket_md(content: str, filepath: Path) -> dict[str, str]:
@@ -51,7 +50,7 @@ def _parse_ticket_md(content: str, filepath: Path) -> dict[str, str]:
 
 
 def _update_plan_with_copilot(
-    tickets_by_status: dict[str, list[dict[str, str]]],
+    tickets: list[dict[str, str]],
     current_milestones: str,
     current_goals: str,
     project_name: str,
@@ -60,22 +59,31 @@ def _update_plan_with_copilot(
     try:
         from github_copilot import Copilot
 
-        # Build ticket summary
+        # Build ticket summary grouped by horizon
+        by_horizon: dict[str, list[dict[str, str]]] = {}
+        for t in tickets:
+            h = t.get("horizon", "sometime")
+            by_horizon.setdefault(h, []).append(t)
+
         ticket_summary = []
-        for status, tickets in sorted(tickets_by_status.items()):
-            ticket_summary.append(f"\n### {status.title()} ({len(tickets)})")
-            for t in tickets[:20]:  # Limit to prevent token overflow
+        for h in HORIZONS:
+            if h not in by_horizon:
+                continue
+            label = HORIZON_LABELS.get(h, h.title())
+            items = by_horizon[h]
+            ticket_summary.append(f"\n### {label} ({len(items)})")
+            for t in items[:20]:
                 title = t.get("title", "Unknown")
+                status = t.get("status", "unknown")
                 assignee = t.get("assignee", "Unassigned")
-                priority = t.get("priority", "")
-                ticket_summary.append(f"- {title} (Assignee: {assignee}, Priority: {priority})")
+                ticket_summary.append(f"- [{status}] {title} (Assignee: {assignee})")
 
         ticket_text = "\n".join(ticket_summary)
 
         copilot = Copilot()
         prompt = (
             f"You are an AI project manager for the project '{project_name}'. "
-            "Based on the current ticket statuses, update the milestones document. "
+            "Based on the current ticket statuses and time horizons, update the milestones document. "
             "Focus on:\n"
             "1. Which milestones are on track, at risk, or completed\n"
             "2. Suggest timeline adjustments based on ticket progress\n"
@@ -83,85 +91,73 @@ def _update_plan_with_copilot(
             "4. Keep the markdown format clean and consistent\n\n"
             f"## Current Milestones\n{current_milestones}\n\n"
             f"## Current Goals\n{current_goals}\n\n"
-            f"## Ticket Status Summary\n{ticket_text}"
+            f"## Ticket Status by Horizon\n{ticket_text}"
         )
 
         response = copilot.chat(prompt)
         return response
     except Exception:
-        return _update_plan_fallback(tickets_by_status, project_name)
+        return _update_plan_fallback(tickets, project_name)
 
 
 def _update_plan_fallback(
-    tickets_by_status: dict[str, list[dict[str, str]]],
+    tickets: list[dict[str, str]],
     project_name: str,
 ) -> str:
-    """Fallback plan update without AI."""
+    """Fallback plan update without AI — grouped by time horizon."""
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     lines = [
-        f"# {project_name} - Milestones",
+        f"# {project_name} — Milestones",
         "",
         f"_Last updated: {now}_",
         "",
     ]
 
-    # Summary stats
-    total = sum(len(v) for v in tickets_by_status.values())
-    lines.append(f"**Total tickets:** {total}")
-    for status, tickets in sorted(tickets_by_status.items()):
-        lines.append(f"- {status.title()}: {len(tickets)}")
+    # Status classification
+    done_statuses = {"done", "closed", "resolved", "complete", "completed"}
+
+    total = len(tickets)
+    completed = [t for t in tickets if t.get("status", "").lower() in done_statuses]
+    open_tickets = [t for t in tickets if t not in completed]
+
+    lines.append(f"**Total:** {total} tickets · **Open:** {len(open_tickets)} · **Completed:** {len(completed)}")
     lines.append("")
 
-    # Group by status
-    done_statuses = {"done", "closed", "resolved", "complete", "completed"}
-    in_progress_statuses = {"in progress", "in review", "in development", "active"}
-    backlog_statuses = {"open", "to do", "todo", "backlog", "new", "created"}
+    # Group open tickets by horizon
+    if open_tickets:
+        open_tickets.sort(key=lambda t: horizon_sort_key(t.get("horizon", "sometime")))
 
-    completed = []
-    in_progress = []
-    backlog = []
-    remaining = []
+        by_horizon: dict[str, list[dict[str, str]]] = {}
+        for t in open_tickets:
+            h = t.get("horizon", "sometime").lower()
+            by_horizon.setdefault(h, []).append(t)
 
-    for status, tickets in tickets_by_status.items():
-        if status in done_statuses:
-            completed.extend(tickets)
-        elif status in in_progress_statuses:
-            in_progress.extend(tickets)
-        elif status in backlog_statuses:
-            backlog.extend(tickets)
-        else:
-            remaining.extend(tickets)
+        for h in HORIZONS:
+            if h not in by_horizon:
+                continue
+            group = by_horizon[h]
+            label = HORIZON_LABELS.get(h, h.title())
+            lines.append(f"## {label} ({len(group)})")
+            lines.append("")
+            for t in group:
+                title = t.get("title", "Unknown")
+                assignee = t.get("assignee", "")
+                status = t.get("status", "open")
+                due = t.get("due", "")
+                suffix_parts = []
+                if assignee:
+                    suffix_parts.append(assignee)
+                if status.lower() not in {"open", "to do", "todo", "backlog", "new", "created"}:
+                    suffix_parts.append(status)
+                if due:
+                    suffix_parts.append(f"due {due}")
+                suffix = f" ({', '.join(suffix_parts)})" if suffix_parts else ""
+                lines.append(f"- [ ] {title}{suffix}")
+            lines.append("")
 
-    if in_progress:
-        lines.append("## In Progress")
-        lines.append("")
-        for t in in_progress:
-            title = t.get("title", "Unknown")
-            assignee = t.get("assignee", "")
-            suffix = f" ({assignee})" if assignee else ""
-            lines.append(f"- [ ] {title}{suffix}")
-        lines.append("")
-
-    if backlog:
-        lines.append("## Backlog")
-        lines.append("")
-        for t in backlog:
-            title = t.get("title", "Unknown")
-            assignee = t.get("assignee", "")
-            suffix = f" ({assignee})" if assignee else ""
-            lines.append(f"- [ ] {title}{suffix}")
-        lines.append("")
-
-    if remaining:
-        lines.append("## Other")
-        lines.append("")
-        for t in remaining:
-            title = t.get("title", "Unknown")
-            lines.append(f"- [ ] {title}")
-        lines.append("")
-
+    # Completed section
     if completed:
-        lines.append("## Completed")
+        lines.append(f"## Completed ({len(completed)})")
         lines.append("")
         for t in completed:
             title = t.get("title", "Unknown")
@@ -183,9 +179,9 @@ def cmd_plan() -> None:
     console.print("[bold]Analyzing tickets and updating plan...[/bold]")
 
     # Collect ticket data
-    tickets_by_status = _collect_ticket_data(project_root)
+    tickets = _collect_ticket_data(project_root)
 
-    if not tickets_by_status:
+    if not tickets:
         console.print("[yellow]No tickets found. Run 'aipm sync' first.[/yellow]")
         return
 
@@ -198,7 +194,7 @@ def cmd_plan() -> None:
 
     # Generate updated plan
     updated_plan = _update_plan_with_copilot(
-        tickets_by_status,
+        tickets,
         current_milestones,
         current_goals,
         config.name,

@@ -3,6 +3,7 @@
 | Field | Value |
 |-------|-------|
 | **Status** | open |
+| **Horizon** | next-week |
 | **Assignee** | chris |
 | **Priority** | medium |
 | **Source** | local |

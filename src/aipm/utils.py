@@ -67,6 +67,8 @@ def format_markdown_ticket(
     description: str = "",
     url: str = "",
     source_type: str = "",
+    horizon: str = "",
+    due: str = "",
     extra_fields: dict[str, str] | None = None,
 ) -> str:
     """Format a ticket as a markdown file content."""
@@ -78,6 +80,10 @@ def format_markdown_ticket(
         f"| **Status** | {status} |",
     ]
 
+    if horizon:
+        lines.append(f"| **Horizon** | {horizon} |")
+    if due:
+        lines.append(f"| **Due** | {due} |")
     if assignee:
         lines.append(f"| **Assignee** | {assignee} |")
     if priority:

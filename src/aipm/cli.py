@@ -82,12 +82,12 @@ def plan() -> None:
 
 
 @main.command()
-@click.argument("period", default="week", type=click.Choice(["day", "week", "month", "year"]))
+@click.argument("period", default="week", type=click.Choice(["day", "week", "month", "year", "all"]))
 @click.argument("user", default="all")
 def summary(period: str, user: str) -> None:
     """Generate a high-level project summary.
 
-    PERIOD: day, week, month, or year (default: week)
+    PERIOD: day, week, month, year, or all (default: week)
     USER: 'all', 'me', or a specific username (default: all)
     """
     from aipm.commands.summary import cmd_summary
@@ -115,6 +115,8 @@ def ticket() -> None:
 @click.option("--assignee", "-a", default="", help="Assignee")
 @click.option("--description", "-d", default="", help="Description")
 @click.option("--labels", "-l", default="", help="Comma-separated labels")
+@click.option("--horizon", "-h", default="", help="Time horizon: now, week, next-week, month, year, sometime")
+@click.option("--due", default="", help="Due date (YYYY-MM-DD)")
 def ticket_add(
     title: str | None,
     status: str,
@@ -122,6 +124,8 @@ def ticket_add(
     assignee: str,
     description: str,
     labels: str,
+    horizon: str,
+    due: str,
 ) -> None:
     """Create a new local ticket."""
     from aipm.commands.ticket import cmd_ticket_add
@@ -133,6 +137,8 @@ def ticket_add(
         assignee=assignee,
         description=description,
         labels=labels,
+        horizon=horizon,
+        due=due,
     )
 
 
@@ -142,6 +148,14 @@ def ticket_list() -> None:
     from aipm.commands.ticket import cmd_ticket_list
 
     cmd_ticket_list()
+
+
+@ticket.command("upgrade")
+def ticket_upgrade() -> None:
+    """Upgrade existing tickets by filling in missing fields (horizon, due, etc.)."""
+    from aipm.commands.ticket import cmd_ticket_upgrade
+
+    cmd_ticket_upgrade()
 
 
 if __name__ == "__main__":

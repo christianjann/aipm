@@ -76,6 +76,7 @@ Commands:
   plan     Update the project plan based on current ticket status.
   summary  Generate a high-level project summary.
   sync     Sync issues from all configured sources to the tickets directory.
+  ticket   Manage local tickets.
 ```
 
 </div>
@@ -123,11 +124,45 @@ uv run aipm commit
 | `aipm add github <URL>` | Add a GitHub repository as an issue source |
 | `aipm sync` | Fetch issues from all sources and write them as Markdown to `tickets/<source>/` |
 | `aipm diff` | Summarize the currently staged git changes using AI (or structured fallback) |
-| `aipm plan` | Update `milestones.md` based on current ticket statuses |
-| `aipm summary [day\|week\|month\|year] [all\|me\|username]` | Generate a high-level project summary for a given period and user |
-| `aipm ticket add` | Create a local ticket (interactive or via flags `-t`, `-p`, `-a`, `-d`, `-l`) |
+| `aipm plan` | Update `milestones.md` based on current ticket horizons and statuses |
+| `aipm summary [day\|week\|month\|year\|all] [all\|me\|username]` | Generate a project summary filtered by time horizon and user |
+| `aipm ticket add` | Create a local ticket (interactive or via flags `-t`, `-p`, `-a`, `-d`, `-l`, `--horizon`, `--due`) |
 | `aipm ticket list` | List all local tickets in a table |
+| `aipm ticket upgrade` | Scan existing tickets and interactively fill in missing fields (horizon, priority, etc.) |
 | `aipm commit` | Stage AIPM files, generate a commit message, and commit |
+
+## Time Horizons
+
+AIPM uses **time horizons** instead of rigid priority levels to organize work.
+Every ticket carries a horizon that tells you _when_ it should be tackled:
+
+| Horizon | Meaning |
+|---------|---------|
+| `now` | Drop everything — must be done today |
+| `week` | Should be finished by end of this week |
+| `next-week` | Needs to be done by end of next week |
+| `month` | Sometime this or next month |
+| `year` | Finish within the year; strategic |
+| `sometime` | Nice-to-have; maybe later |
+
+```bash
+# Create a ticket with a horizon
+aipm ticket add -t "Fix login crash" --horizon now -p high
+
+# Urgent items only
+aipm summary day
+
+# This week's workload
+aipm summary week
+
+# Full picture
+aipm summary all
+```
+
+Tickets can also carry an optional `--due YYYY-MM-DD` date. If a due date is set without
+an explicit horizon, AIPM infers the horizon automatically.
+
+See [doc/planning.md](doc/planning.md) for the full planning concept.
 
 ## Project Structure
 
@@ -146,9 +181,11 @@ my-project/
 │   └── repo/          # GitHub source
 │       ├── 42_add_readme.md
 │       └── 87_refactor_api.md
-├── milestones.md      # Project milestones and timeline
+├── milestones.md      # Project milestones grouped by horizon
 ├── goals.md           # Project goals
 ├── generated/         # Generated reports (plan, kanban, etc.)
+├── doc/               # Documentation
+│   └── planning.md    # Planning concept and horizon reference
 └── README.md          # Project summary
 ```
 

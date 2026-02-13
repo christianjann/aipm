@@ -33,6 +33,7 @@
 - Tests use a `work_dir` fixture (from `conftest.py`) that creates directories under `tests/.tmp/<test_name>/` for easy debugging
 - Use `CliRunner` from click for testing CLI commands
 - Run all checks with: `just check`
+- For each error log that the user pastes in the chat, that was not covered by tests before, add a regression test case
 
 ## Documentation
 
@@ -57,6 +58,7 @@ src/aipm/
 ├── __init__.py          # Package version
 ├── cli.py               # Click CLI entry point and command registration
 ├── config.py            # aipm.toml config loading/saving
+├── horizons.py          # Time horizon constants, inference, validation
 ├── utils.py             # Git helpers, sanitization, markdown formatting
 ├── commands/            # One module per command
 │   ├── init.py

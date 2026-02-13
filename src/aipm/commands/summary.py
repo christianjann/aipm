@@ -10,6 +10,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from aipm.config import ProjectConfig, get_project_root
+from aipm.horizons import HORIZON_LABELS, HORIZONS, horizon_sort_key, horizons_for_period
 
 console = Console()
 
@@ -52,6 +53,12 @@ def _filter_by_user(tickets: list[dict[str, str]], user: str) -> list[dict[str, 
     return [t for t in tickets if t.get("assignee", "").lower() == user.lower()]
 
 
+def _filter_by_period(tickets: list[dict[str, str]], period: str) -> list[dict[str, str]]:
+    """Filter tickets to only those whose horizon matches the requested period."""
+    relevant = horizons_for_period(period)
+    return [t for t in tickets if t.get("horizon", "sometime").lower() in relevant]
+
+
 def _generate_summary_with_copilot(
     tickets: list[dict[str, str]],
     period: str,
@@ -70,15 +77,15 @@ def _generate_summary_with_copilot(
             title = t.get("title", "Unknown")
             status = t.get("status", "unknown")
             assignee = t.get("assignee", "Unassigned")
-            priority = t.get("priority", "")
-            ticket_lines.append(f"- [{status}] {title} (Assignee: {assignee}, Priority: {priority})")
+            horizon = t.get("horizon", "sometime")
+            ticket_lines.append(f"- [{status}] {title} (Assignee: {assignee}, Horizon: {horizon})")
 
         ticket_text = "\n".join(ticket_lines)
 
         copilot = Copilot()
         prompt = (
             f"You are an AI project manager for '{config.name}'. "
-            f"Generate a {period}ly summary report. "
+            f"Generate a {period} summary report. "
             f"User filter: {user}.\n\n"
             "Focus on:\n"
             "1. Key accomplishments in this period\n"
@@ -103,82 +110,92 @@ def _generate_summary_fallback(
     user: str,
     config: ProjectConfig,
 ) -> str:
-    """Generate a summary without AI."""
+    """Generate a summary without AI, grouped by time horizon."""
     now = datetime.now()
     lines = [
-        f"# {config.name} - {period.title()} Summary",
+        f"# {config.name} — {period.title()} Summary",
         "",
         f"_Generated: {now.strftime('%Y-%m-%d %H:%M')}_",
-        f"_Filter: {user}_",
+        f"_Filter: {user} · Period: {period}_",
         "",
     ]
 
-    # Group by status
-    by_status: dict[str, list[dict[str, str]]] = {}
-    for t in tickets:
-        status = t.get("status", "unknown").lower()
-        by_status.setdefault(status, []).append(t)
+    # Filter tickets to the requested period
+    relevant_horizons = horizons_for_period(period)
+    period_tickets = [t for t in tickets if t.get("horizon", "sometime").lower() in relevant_horizons]
 
-    total = len(tickets)
-    lines.append(f"## Overview ({total} tickets)")
-    lines.append("")
-
-    for status, items in sorted(by_status.items()):
-        lines.append(f"- **{status.title()}**: {len(items)}")
-    lines.append("")
-
-    # Active / in-progress items
-    active_statuses = {"in progress", "in review", "in development", "active"}
-    backlog_statuses = {"open", "to do", "todo", "backlog", "new", "created"}
-    active = [t for t in tickets if t.get("status", "").lower() in active_statuses]
-    backlog = [t for t in tickets if t.get("status", "").lower() in backlog_statuses]
-
-    if active:
-        lines.append("## Active Tasks")
-        lines.append("")
-
-        # Group by priority
-        hp_values = ("highest", "high", "critical", "urgent")
-        high_priority = [t for t in active if t.get("priority", "").lower() in hp_values]
-        normal = [t for t in active if t not in high_priority]
-
-        if high_priority:
-            lines.append("### High Priority")
-            lines.append("")
-            for t in high_priority:
-                title = t.get("title", "Unknown")
-                assignee = t.get("assignee", "Unassigned")
-                lines.append(f"- **{title}** ({assignee})")
-            lines.append("")
-
-        if normal:
-            lines.append("### Normal Priority")
-            lines.append("")
-            for t in normal[:15]:
-                title = t.get("title", "Unknown")
-                assignee = t.get("assignee", "Unassigned")
-                lines.append(f"- {title} ({assignee})")
-            if len(normal) > 15:
-                lines.append(f"- _...and {len(normal) - 15} more_")
-            lines.append("")
-
-    # Backlog items
-    if backlog:
-        lines.append(f"## Backlog ({len(backlog)})")
-        lines.append("")
-        for t in backlog[:15]:
-            title = t.get("title", "Unknown")
-            assignee = t.get("assignee", "")
-            suffix = f" ({assignee})" if assignee else ""
-            lines.append(f"- {title}{suffix}")
-        if len(backlog) > 15:
-            lines.append(f"- _...and {len(backlog) - 15} more_")
-        lines.append("")
-
-    # Completed items
+    # Status classification
     done_statuses = {"done", "closed", "resolved", "complete", "completed"}
-    completed = [t for t in tickets if t.get("status", "").lower() in done_statuses]
+    active_statuses = {"in progress", "in review", "in development", "active"}
 
+    total = len(period_tickets)
+    completed = [t for t in period_tickets if t.get("status", "").lower() in done_statuses]
+    active = [t for t in period_tickets if t.get("status", "").lower() in active_statuses]
+    remaining = [t for t in period_tickets if t not in completed and t not in active]
+
+    lines.append(f"## Overview ({total} tickets in scope)")
+    lines.append("")
+    if active:
+        lines.append(f"- **Active:** {len(active)}")
+    if remaining:
+        lines.append(f"- **Open:** {len(remaining)}")
+    if completed:
+        lines.append(f"- **Completed:** {len(completed)}")
+    lines.append("")
+
+    # Group non-completed tickets by horizon, then by status within each horizon
+    open_tickets = active + remaining
+    if open_tickets:
+        # Sort by horizon urgency
+        open_tickets.sort(key=lambda t: horizon_sort_key(t.get("horizon", "sometime")))
+
+        by_horizon: dict[str, list[dict[str, str]]] = {}
+        for t in open_tickets:
+            h = t.get("horizon", "sometime").lower()
+            by_horizon.setdefault(h, []).append(t)
+
+        for h in HORIZONS:
+            if h not in by_horizon or h not in relevant_horizons:
+                continue
+            group = by_horizon[h]
+            label = HORIZON_LABELS.get(h, h.title())
+            lines.append(f"## {label} ({len(group)})")
+            lines.append("")
+
+            # Sort by priority within horizon
+            hp_values = ("highest", "high", "critical", "urgent")
+            high = [t for t in group if t.get("priority", "").lower() in hp_values]
+            normal = [t for t in group if t not in high]
+
+            for t in high:
+                title = t.get("title", "Unknown")
+                assignee = t.get("assignee", "")
+                status = t.get("status", "open")
+                due = t.get("due", "")
+                suffix_parts = []
+                if assignee:
+                    suffix_parts.append(assignee)
+                if due:
+                    suffix_parts.append(f"due {due}")
+                suffix = f" ({', '.join(suffix_parts)})" if suffix_parts else ""
+                lines.append(f"- **⚡ {title}** [{status}]{suffix}")
+
+            for t in normal:
+                title = t.get("title", "Unknown")
+                assignee = t.get("assignee", "")
+                status = t.get("status", "open")
+                due = t.get("due", "")
+                suffix_parts = []
+                if assignee:
+                    suffix_parts.append(assignee)
+                if due:
+                    suffix_parts.append(f"due {due}")
+                suffix = f" ({', '.join(suffix_parts)})" if suffix_parts else ""
+                lines.append(f"- {title} [{status}]{suffix}")
+
+            lines.append("")
+
+    # Completed
     if completed:
         lines.append(f"## Completed ({len(completed)})")
         lines.append("")
@@ -189,13 +206,26 @@ def _generate_summary_fallback(
             lines.append(f"- _...and {len(completed) - 10} more_")
         lines.append("")
 
+    # Tickets outside scope (only show count if period != "all")
+    if period != "all":
+        out_of_scope = [
+            t for t in tickets if t not in period_tickets and t.get("status", "").lower() not in done_statuses
+        ]
+        if out_of_scope:
+            lines.append(
+                f"_({len(out_of_scope)} tickets in later horizons not shown"
+                " — use `aipm summary all` to see everything)_"
+            )
+            lines.append("")
+
     # Next steps
     lines.append("## Recommended Next Steps")
     lines.append("")
-    if high_priority:
-        lines.append("1. Focus on high-priority items listed above")
+    now_tickets = [t for t in open_tickets if t.get("horizon", "").lower() == "now"]
+    if now_tickets:
+        lines.append(f"1. **{len(now_tickets)} urgent ticket(s)** need immediate attention")
     if active:
-        lines.append(f"2. {len(active)} active tasks need attention")
+        lines.append(f"2. {len(active)} task(s) currently in progress")
     lines.append("3. Run `aipm sync` to get latest updates")
     lines.append("4. Run `aipm plan` to refresh milestones")
     lines.append("")
@@ -235,7 +265,7 @@ def cmd_summary(period: str = "week", user: str = "all") -> None:
     if milestones_path.exists():
         milestones = milestones_path.read_text()
 
-    summary = _generate_summary_with_copilot(tickets, period, user, config, goals, milestones)
+    summary_text = _generate_summary_with_copilot(tickets, period, user, config, goals, milestones)
 
-    md = Markdown(summary)
+    md = Markdown(summary_text)
     console.print(Panel(md, title=f"{period.title()} Summary", border_style="blue"))

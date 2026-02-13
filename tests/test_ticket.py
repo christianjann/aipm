@@ -23,7 +23,7 @@ def test_ticket_add_creates_file(work_dir: Path) -> None:
     result = runner.invoke(
         main,
         ["ticket", "add"],
-        input="My first ticket\nSome description\nmedium\n\n",
+        input="My first ticket\nSome description\nmedium\nsometime\n\n\n",
     )
 
     assert result.exit_code == 0, result.output
@@ -128,3 +128,162 @@ def test_init_creates_local_dir(work_dir: Path) -> None:
     """Verify aipm init creates tickets/local/ directory."""
     _init_project(work_dir)
     assert (work_dir / "tickets" / "local").is_dir()
+
+
+def test_ticket_add_with_horizon_flag(work_dir: Path) -> None:
+    """Verify --horizon flag is stored in the ticket file."""
+    _init_project(work_dir)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ["ticket", "add", "-t", "Urgent fix", "--horizon", "now", "-p", "high"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "now" in result.output
+
+    local_dir = work_dir / "tickets" / "local"
+    content = next(iter(local_dir.glob("*.md"))).read_text()
+    assert "now" in content
+    assert "Horizon" in content
+
+
+def test_ticket_add_with_due_date(work_dir: Path) -> None:
+    """Verify --due flag is stored in the ticket file."""
+    _init_project(work_dir)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ["ticket", "add", "-t", "Deadline task", "--horizon", "week", "--due", "2025-07-15", "-p", "medium"],
+    )
+
+    assert result.exit_code == 0, result.output
+
+    local_dir = work_dir / "tickets" / "local"
+    content = next(iter(local_dir.glob("*.md"))).read_text()
+    assert "2025-07-15" in content
+    assert "Due" in content
+
+
+def test_ticket_add_default_horizon_is_sometime(work_dir: Path) -> None:
+    """When no horizon is specified non-interactively, default should be 'sometime'."""
+    _init_project(work_dir)
+
+    runner = CliRunner()
+    runner.invoke(
+        main,
+        ["ticket", "add", "-t", "Low prio task", "-p", "low"],
+    )
+
+    local_dir = work_dir / "tickets" / "local"
+    content = next(iter(local_dir.glob("*.md"))).read_text()
+    assert "sometime" in content
+
+
+def test_ticket_add_invalid_horizon(work_dir: Path) -> None:
+    """Invalid horizon value should produce an error message."""
+    _init_project(work_dir)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ["ticket", "add", "-t", "Bad horizon", "--horizon", "tomorrow"],
+    )
+
+    assert result.exit_code == 0  # Doesn't crash
+    assert "Invalid horizon" in result.output
+
+
+def test_ticket_list_shows_horizon(work_dir: Path) -> None:
+    """Verify ticket list table includes horizon column."""
+    _init_project(work_dir)
+
+    runner = CliRunner()
+    runner.invoke(main, ["ticket", "add", "-t", "Task A", "--horizon", "week", "-p", "medium"])
+    runner.invoke(main, ["ticket", "add", "-t", "Task B", "--horizon", "now", "-p", "high"])
+
+    result = runner.invoke(main, ["ticket", "list"])
+    assert result.exit_code == 0
+    assert "Horizon" in result.output
+    assert "week" in result.output
+    assert "now" in result.output
+
+
+def test_ticket_upgrade_adds_missing_horizon(work_dir: Path) -> None:
+    """Upgrade should prompt for horizon on tickets that lack it."""
+    _init_project(work_dir)
+
+    # Create a ticket file without horizon field (old format)
+    local_dir = work_dir / "tickets" / "local"
+    local_dir.mkdir(parents=True, exist_ok=True)
+    content = (
+        "# L-0001: Old ticket\n\n"
+        "| Field | Value |\n"
+        "|-------|-------|\n"
+        "| **Status** | open |\n"
+        "| **Priority** | medium |\n"
+        "| **Source** | local |\n"
+    )
+    (local_dir / "0001_old_ticket.md").write_text(content)
+
+    runner = CliRunner()
+    # Answer: yes to update, "week" for horizon, empty for due, empty for assignee
+    result = runner.invoke(main, ["ticket", "upgrade"], input="y\nweek\n\n\n")
+
+    assert result.exit_code == 0, result.output
+    assert "Updated" in result.output
+
+    # Verify the file now has horizon
+    updated = (local_dir / "0001_old_ticket.md").read_text()
+    assert "Horizon" in updated
+    assert "week" in updated
+
+
+def test_ticket_upgrade_skips_complete_tickets(work_dir: Path) -> None:
+    """Upgrade should skip tickets that already have all fields."""
+    _init_project(work_dir)
+
+    runner = CliRunner()
+    # Create a ticket with all fields filled
+    runner.invoke(
+        main,
+        ["ticket", "add", "-t", "Complete ticket", "--horizon", "now", "-p", "high", "-a", "alice"],
+    )
+
+    result = runner.invoke(main, ["ticket", "upgrade"])
+
+    assert result.exit_code == 0, result.output
+    assert "already complete" in result.output
+    assert "0 upgraded" in result.output
+
+
+def test_ticket_upgrade_skip_individual(work_dir: Path) -> None:
+    """User can skip a ticket during upgrade."""
+    _init_project(work_dir)
+
+    local_dir = work_dir / "tickets" / "local"
+    local_dir.mkdir(parents=True, exist_ok=True)
+    content = (
+        "# L-0001: Skip me\n\n| Field | Value |\n|-------|-------|\n| **Status** | open |\n| **Source** | local |\n"
+    )
+    (local_dir / "0001_skip_me.md").write_text(content)
+
+    runner = CliRunner()
+    # Answer "n" to skip
+    result = runner.invoke(main, ["ticket", "upgrade"], input="n\n")
+
+    assert result.exit_code == 0, result.output
+    assert "1 skipped" in result.output
+
+
+def test_ticket_upgrade_no_tickets(work_dir: Path) -> None:
+    """Upgrade on empty project should report no tickets."""
+    _init_project(work_dir)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["ticket", "upgrade"])
+
+    assert result.exit_code == 0
+    assert "No local tickets" in result.output

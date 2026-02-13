@@ -3,6 +3,8 @@
 | Field | Value |
 |-------|-------|
 | **Status** | open |
+| **Horizon** | now |
+| **Due** | 2025-02-13 |
 | **Assignee** | claude |
 | **Priority** | high |
 | **Source** | local |
