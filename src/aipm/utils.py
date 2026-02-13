@@ -111,36 +111,142 @@ def format_markdown_ticket(
     return "\n".join(lines)
 
 
-def copilot_chat(prompt: str, *, timeout: float = 120.0) -> str:
-    """Send a prompt to the Copilot SDK and return the response text.
+# Default model — cheapest Claude available on Copilot
+COPILOT_DEFAULT_MODEL = "claude-haiku-4.5"
 
-    Uses the github-copilot-sdk (``copilot`` package) which provides an async
-    client that spawns a local Copilot CLI server. We run the async flow in a
-    one-shot event loop so callers stay synchronous.
 
-    Raises ``RuntimeError`` when the SDK is unavailable or the request fails.
-    """
+class ModelUnavailableError(RuntimeError):
+    """Raised when the configured Copilot model fails and the user should pick another."""
+
+
+def _get_configured_model() -> str:
+    """Read the Copilot model from aipm.toml, or return the default."""
+    from aipm.config import ProjectConfig, get_project_root
+
+    project_root = get_project_root()
+    if project_root is None:
+        return COPILOT_DEFAULT_MODEL
+    try:
+        config = ProjectConfig.load(project_root)
+        return config.copilot_model or COPILOT_DEFAULT_MODEL
+    except FileNotFoundError:
+        return COPILOT_DEFAULT_MODEL
+
+
+def list_copilot_models() -> list[tuple[str, str]]:
+    """Return available Copilot models as (id, name) pairs."""
     from copilot import CopilotClient
-    from copilot.generated.session_events import SessionEventType
 
-    async def _run() -> str:
+    async def _run() -> list[tuple[str, str]]:
         client = CopilotClient()
         await client.start()
         try:
-            session = await client.create_session()
-            collected: list[str] = []
-
-            def _handler(event: object) -> None:
-                if getattr(event, "type", None) == SessionEventType.ASSISTANT_MESSAGE:
-                    msg = getattr(event.data, "content", None) or getattr(event.data, "message", None)  # type: ignore[union-attr]
-                    if msg:
-                        collected.append(msg)
-
-            session.on(_handler)
-            await session.send_and_wait({"prompt": prompt}, timeout=timeout)
-            await session.destroy()
-            return "\n".join(collected) if collected else ""
+            models = await client.list_models()
+            return [(m.id, m.name) for m in models]
         finally:
             await client.stop()
 
     return asyncio.run(_run())
+
+
+def select_copilot_model() -> str:
+    """Interactively prompt the user to pick a Copilot model and save to config."""
+    import click
+    from rich.console import Console
+
+    from aipm.config import ProjectConfig, get_project_root
+
+    console = Console()
+    console.print("[yellow]Configured Copilot model is not available. Fetching model list...[/yellow]")
+
+    try:
+        models = list_copilot_models()
+    except Exception:
+        console.print("[red]Could not fetch models from Copilot. Using default.[/red]")
+        return COPILOT_DEFAULT_MODEL
+
+    if not models:
+        console.print("[red]No models available.[/red]")
+        return COPILOT_DEFAULT_MODEL
+
+    console.print("\n[bold]Available models:[/bold]")
+    for i, (mid, mname) in enumerate(models, 1):
+        console.print(f"  [cyan]{i}[/cyan]. {mid:40s} {mname}")
+
+    choice = click.prompt(
+        "\nSelect a model",
+        type=click.IntRange(1, len(models)),
+        default=next((i for i, (mid, _) in enumerate(models, 1) if "haiku" in mid), 1),
+    )
+    selected_id = models[choice - 1][0]
+    console.print(f"  Selected: [green]{selected_id}[/green]")
+
+    # Save to aipm.toml
+    project_root = get_project_root()
+    if project_root is not None:
+        try:
+            config = ProjectConfig.load(project_root)
+            config.copilot_model = selected_id
+            config.save(project_root)
+            console.print("  Saved to [dim]aipm.toml[/dim]")
+        except FileNotFoundError:
+            pass
+
+    return selected_id
+
+
+def copilot_chat(prompt: str, *, timeout: float = 15.0, retries: int = 3, model: str | None = None) -> str:
+    """Send a prompt to the Copilot SDK and return the response text.
+
+    Uses the github-copilot-sdk (``copilot`` package) which provides an async
+    client that spawns a local Copilot CLI server.  Reuses a single client
+    across retries to avoid repeated server startup overhead.
+
+    If the configured model is not available, raises ``ModelUnavailableError``
+    so the caller can handle interactive model selection.
+
+    Raises ``RuntimeError`` when the SDK is unavailable or all retries fail.
+    """
+    from copilot import CopilotClient
+
+    effective_model = model or _get_configured_model()
+
+    async def _run(use_model: str) -> str:
+        last_err: Exception | None = None
+        client = CopilotClient()
+        await client.start()
+        try:
+            for _attempt in range(1, retries + 1):
+                try:
+                    session = await client.create_session({"model": use_model})
+                    response = await session.send_and_wait({"prompt": prompt}, timeout=timeout)
+                    await session.destroy()
+                    if response and hasattr(response, "data"):
+                        text = (
+                            getattr(response.data, "content", None)
+                            or getattr(response.data, "message", None)
+                            or ""
+                        )
+                        if text:
+                            return text
+                    # Empty response — retry
+                    last_err = RuntimeError("Copilot returned empty response")
+                except TimeoutError as exc:
+                    last_err = exc
+                except Exception as exc:
+                    # Non-timeout errors (e.g. invalid model) — don't retry
+                    err_msg = str(exc).lower()
+                    if "model" in err_msg or "not found" in err_msg or "invalid" in err_msg or "unavailable" in err_msg:
+                        raise ModelUnavailableError(use_model) from exc
+                    last_err = exc
+        finally:
+            await client.stop()
+        msg = f"Copilot failed after {retries} attempts"
+        raise RuntimeError(msg) from last_err
+
+    try:
+        return asyncio.run(_run(effective_model))
+    except ModelUnavailableError:
+        if model is not None:
+            raise  # Caller explicitly requested a model, don't override
+        raise

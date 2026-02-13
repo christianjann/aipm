@@ -84,7 +84,8 @@ def plan() -> None:
 @main.command()
 @click.argument("period", default="week", type=click.Choice(["day", "week", "month", "year", "all"]))
 @click.argument("user", default="all")
-def summary(period: str, user: str) -> None:
+@click.option("--debug", "-d", is_flag=True, default=False, help="Print Copilot prompt and response for debugging")
+def summary(period: str, user: str, debug: bool) -> None:
     """Generate a high-level project summary.
 
     PERIOD: day, week, month, year, or all (default: week)
@@ -92,7 +93,7 @@ def summary(period: str, user: str) -> None:
     """
     from aipm.commands.summary import cmd_summary
 
-    cmd_summary(period=period, user=user)
+    cmd_summary(period=period, user=user, debug=debug)
 
 
 @main.command()

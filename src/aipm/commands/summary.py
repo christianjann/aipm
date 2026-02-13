@@ -66,10 +66,12 @@ def _generate_summary_with_copilot(
     config: ProjectConfig,
     goals: str,
     milestones: str,
+    *,
+    debug: bool = False,
 ) -> str:
     """Generate summary using Copilot."""
     try:
-        from aipm.utils import copilot_chat
+        from aipm.utils import ModelUnavailableError, copilot_chat, select_copilot_model
 
         # Build ticket info
         ticket_lines = []
@@ -97,7 +99,32 @@ def _generate_summary_with_copilot(
             f"## Tickets\n{ticket_text}"
         )
 
-        return copilot_chat(prompt)
+        if debug:
+            console.print(Panel(prompt, title="Copilot prompt", border_style="yellow"))
+
+        with console.status("  Waiting for Copilot..."):
+            result = copilot_chat(prompt)
+
+        if not result or not result.strip():
+            console.print("  [dim]Copilot returned empty response, using fallback[/dim]")
+            return _generate_summary_fallback(tickets, period, user, config)
+
+        if debug:
+            console.print(Panel(result, title="Copilot response", border_style="yellow"))
+
+        return result
+    except ModelUnavailableError:
+        new_model = select_copilot_model()
+        try:
+            with console.status("  Waiting for Copilot..."):
+                result = copilot_chat(prompt, model=new_model)
+            if result and result.strip():
+                if debug:
+                    console.print(Panel(result, title="Copilot response", border_style="yellow"))
+                return result
+        except Exception:
+            pass
+        return _generate_summary_fallback(tickets, period, user, config)
     except Exception:
         return _generate_summary_fallback(tickets, period, user, config)
 
@@ -231,7 +258,7 @@ def _generate_summary_fallback(
     return "\n".join(lines)
 
 
-def cmd_summary(period: str = "week", user: str = "all") -> None:
+def cmd_summary(period: str = "week", user: str = "all", *, debug: bool = False) -> None:
     """Generate a high-level project summary."""
     project_root = get_project_root()
     if project_root is None:
@@ -263,7 +290,7 @@ def cmd_summary(period: str = "week", user: str = "all") -> None:
     if milestones_path.exists():
         milestones = milestones_path.read_text()
 
-    summary_text = _generate_summary_with_copilot(tickets, period, user, config, goals, milestones)
+    summary_text = _generate_summary_with_copilot(tickets, period, user, config, goals, milestones, debug=debug)
 
     md = Markdown(summary_text)
     console.print(Panel(md, title=f"{period.title()} Summary", border_style="blue"))

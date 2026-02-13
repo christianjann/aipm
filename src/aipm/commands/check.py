@@ -14,7 +14,14 @@ from rich.panel import Panel
 
 from aipm.config import get_project_root
 from aipm.horizons import horizon_sort_key
-from aipm.utils import copilot_chat, git_commit, git_has_staged_changes, git_stage_files
+from aipm.utils import (
+    ModelUnavailableError,
+    copilot_chat,
+    git_commit,
+    git_has_staged_changes,
+    git_stage_files,
+    select_copilot_model,
+)
 
 console = Console()
 
@@ -145,11 +152,49 @@ def _build_keywords(ticket_info: dict[str, str]) -> list[str]:
     text = f"{title} {description}".lower()
     # Split into meaningful words (3+ chars), deduplicate
     stop_words = {
-        "the", "and", "for", "that", "this", "with", "from", "have", "are",
-        "was", "were", "been", "being", "will", "would", "could", "should",
-        "can", "may", "not", "but", "all", "also", "into", "over", "such",
-        "than", "then", "when", "what", "which", "where", "who", "how",
-        "has", "had", "its", "our", "out", "use", "add", "new", "set",
+        "the",
+        "and",
+        "for",
+        "that",
+        "this",
+        "with",
+        "from",
+        "have",
+        "are",
+        "was",
+        "were",
+        "been",
+        "being",
+        "will",
+        "would",
+        "could",
+        "should",
+        "can",
+        "may",
+        "not",
+        "but",
+        "all",
+        "also",
+        "into",
+        "over",
+        "such",
+        "than",
+        "then",
+        "when",
+        "what",
+        "which",
+        "where",
+        "who",
+        "how",
+        "has",
+        "had",
+        "its",
+        "our",
+        "out",
+        "use",
+        "add",
+        "new",
+        "set",
     }
     words = []
     for word in text.split():
@@ -257,6 +302,22 @@ def _check_with_copilot(
         relevant = [c for c in commits if c.hash[:8] in relevant_hashes] if relevant_hashes else []
 
         return relevant, response
+    except ModelUnavailableError:
+        new_model = select_copilot_model()
+        try:
+            response = copilot_chat(prompt, model=new_model)
+            if response and response.strip():
+                if debug:
+                    console.print(Panel(response, title="Copilot response", border_style="yellow"))
+                else:
+                    console.print(f"  [dim]Copilot: {response.strip()[:200]}[/dim]")
+                relevant_hashes = _extract_hashes(response)
+                known_hashes = {c.hash[:8] for c in commits}
+                relevant_hashes &= known_hashes
+                relevant = [c for c in commits if c.hash[:8] in relevant_hashes] if relevant_hashes else []
+                return relevant, response
+        except Exception:
+            pass
     except Exception:
         pass
 
@@ -279,8 +340,7 @@ def _check_fallback(ticket_info: dict[str, str], relevant_commits: list[CommitIn
         f"**Current status:** {status}",
         f"**Description:** {description}\n",
         "---\n",
-        f"**{len(relevant_commits)} potentially relevant commit(s) found** "
-        "(matched by keywords — review manually):\n",
+        f"**{len(relevant_commits)} potentially relevant commit(s) found** (matched by keywords — review manually):\n",
     ]
     for commit in relevant_commits:
         lines.append(f"- `{commit.hash[:8]}` {commit.message}")

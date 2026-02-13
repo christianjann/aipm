@@ -35,25 +35,31 @@ class ProjectConfig:
 
     name: str = ""
     description: str = ""
+    copilot_model: str = ""
     sources: list[SourceConfig] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "project": {
                 "name": self.name,
                 "description": self.description,
             },
             "sources": [s.to_dict() for s in self.sources],
         }
+        if self.copilot_model:
+            d["copilot"] = {"model": self.copilot_model}
+        return d
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ProjectConfig:
         project = data.get("project", {})
         sources_data = data.get("sources", [])
         sources = [SourceConfig.from_dict(s) for s in sources_data]
+        copilot = data.get("copilot", {})
         return cls(
             name=project.get("name", ""),
             description=project.get("description", ""),
+            copilot_model=copilot.get("model", ""),
             sources=sources,
         )
 

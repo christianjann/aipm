@@ -3,3 +3,6 @@ sources = []
 [project]
 name = "AIPM"
 description = "Manage large projects distributed over multiple issue trackers and tools — from a single local workspace."
+
+[copilot]
+model = "claude-haiku-4.5"

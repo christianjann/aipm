@@ -86,3 +86,33 @@ def test_init_does_not_overwrite_existing(work_dir: Path) -> None:
     # Config should still have original values
     config = toml.load(work_dir / CONFIG_FILENAME)
     assert config["project"]["name"] == "proj1"
+
+
+def test_config_copilot_model_roundtrip(work_dir: Path) -> None:
+    """Verify copilot_model is saved to and loaded from aipm.toml."""
+    from aipm.config import ProjectConfig
+
+    config = ProjectConfig(name="test", description="d", copilot_model="claude-haiku-4.5")
+    config.save(work_dir)
+
+    loaded = ProjectConfig.load(work_dir)
+    assert loaded.copilot_model == "claude-haiku-4.5"
+
+    # Verify toml structure
+    raw = toml.load(work_dir / CONFIG_FILENAME)
+    assert raw["copilot"]["model"] == "claude-haiku-4.5"
+
+
+def test_config_copilot_model_absent(work_dir: Path) -> None:
+    """When no copilot section exists, copilot_model defaults to empty string."""
+    from aipm.config import ProjectConfig
+
+    config = ProjectConfig(name="test", description="d")
+    config.save(work_dir)
+
+    loaded = ProjectConfig.load(work_dir)
+    assert loaded.copilot_model == ""
+
+    # No copilot section in toml
+    raw = toml.load(work_dir / CONFIG_FILENAME)
+    assert "copilot" not in raw
