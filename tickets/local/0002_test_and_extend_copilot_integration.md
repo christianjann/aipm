@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | open |
+| **Status** | completed |
 | **Horizon** | next-week |
 | **Assignee** | chris |
 | **Priority** | medium |

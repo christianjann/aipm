@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | open |
+| **Status** | completed |
 | **Horizon** | now |
 | **Due** | 2025-02-13 |
 | **Assignee** | claude |

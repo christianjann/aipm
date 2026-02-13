@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | open |
+| **Status** | completed |
 | **Horizon** | year |
 | **Priority** | medium |
 | **Source** | local |
