@@ -7,6 +7,7 @@
 | **Assignee** | claude |
 | **Priority** | high |
 | **Source** | local |
+| **Repo** | . |
 
 ## Description
 

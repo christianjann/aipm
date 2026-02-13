@@ -66,6 +66,7 @@ def format_markdown_ticket(
     labels: list[str] | None = None,
     description: str = "",
     url: str = "",
+    repo: str = "",
     source_type: str = "",
     horizon: str = "",
     due: str = "",
@@ -94,6 +95,8 @@ def format_markdown_ticket(
         lines.append(f"| **Source** | {source_type} |")
     if url:
         lines.append(f"| **URL** | [{url}]({url}) |")
+    if repo:
+        lines.append(f"| **Repo** | {repo} |")
 
     if extra_fields:
         for field_name, field_value in extra_fields.items():

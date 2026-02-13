@@ -20,6 +20,7 @@ class Ticket:
     labels: list[str] | None = None
     description: str = ""
     url: str = ""
+    repo: str = ""
     source_type: str = ""
     source_name: str = ""
     horizon: str = "sometime"

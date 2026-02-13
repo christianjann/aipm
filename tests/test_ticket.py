@@ -23,7 +23,7 @@ def test_ticket_add_creates_file(work_dir: Path) -> None:
     result = runner.invoke(
         main,
         ["ticket", "add"],
-        input="My first ticket\nSome description\nmedium\nsometime\n\n\n",
+        input="My first ticket\nSome description\nmedium\nsometime\n\n\n\n",
     )
 
     assert result.exit_code == 0, result.output
@@ -229,8 +229,8 @@ def test_ticket_upgrade_adds_missing_horizon(work_dir: Path) -> None:
     (local_dir / "0001_old_ticket.md").write_text(content)
 
     runner = CliRunner()
-    # Answer: yes to update, "week" for horizon, empty for due, empty for assignee
-    result = runner.invoke(main, ["ticket", "upgrade"], input="y\nweek\n\n\n")
+    # Answer: yes to update, "week" for horizon, empty for due, empty for assignee, empty for repo
+    result = runner.invoke(main, ["ticket", "upgrade"], input="y\nweek\n\n\n\n")
 
     assert result.exit_code == 0, result.output
     assert "Updated" in result.output

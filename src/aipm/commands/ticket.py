@@ -40,6 +40,7 @@ def cmd_ticket_add(
     labels: str = "",
     horizon: str = "",
     due: str = "",
+    repo: str = "",
 ) -> None:
     """Create a new local ticket."""
     project_root = get_project_root()
@@ -92,6 +93,9 @@ def cmd_ticket_add(
     if interactive and not assignee:
         assignee = click.prompt("Assignee (optional)", default="", show_default=False)
 
+    if interactive and not repo:
+        repo = click.prompt("Repo (git URL or local path, optional)", default="", show_default=False)
+
     label_list = [item.strip() for item in labels.split(",") if item.strip()] if labels else []
 
     # If due date is set but horizon was left at default, infer horizon
@@ -116,6 +120,7 @@ def cmd_ticket_add(
         labels=label_list or None,
         description=description,
         url="",
+        repo=repo,
         source_type="local",
         horizon=horizon,
         due=due,
@@ -223,7 +228,7 @@ def cmd_ticket_upgrade() -> None:
     # Fields that every ticket should have
     required_fields = ["horizon", "priority"]
     # Fields that are nice to have but truly optional
-    optional_fields = ["due", "assignee"]
+    optional_fields = ["due", "assignee", "repo"]
     upgraded = 0
     skipped = 0
 
@@ -258,6 +263,7 @@ def cmd_ticket_upgrade() -> None:
         new_due = info.get("due", "")
         new_priority = info.get("priority", "")
         new_assignee = info.get("assignee", "")
+        new_repo = info.get("repo", "")
 
         if "horizon" in missing:
             new_horizon = click.prompt(
@@ -278,6 +284,9 @@ def cmd_ticket_upgrade() -> None:
 
         if "assignee" in missing:
             new_assignee = click.prompt("  Assignee (optional)", default="", show_default=False)
+
+        if "repo" in missing:
+            new_repo = click.prompt("  Repo (git URL or local path, optional)", default="", show_default=False)
 
         # If due date set but horizon is still default, infer
         if new_due and new_horizon == "sometime":
@@ -300,6 +309,7 @@ def cmd_ticket_upgrade() -> None:
             labels=label_list,
             description=description,
             url=info.get("url", ""),
+            repo=new_repo,
             source_type=info.get("source", "local"),
             horizon=new_horizon,
             due=new_due,

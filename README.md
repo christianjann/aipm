@@ -2,10 +2,13 @@
 
 > Manage large projects distributed over multiple issue trackers and tools — from a single local workspace.
 
+![](doc/images/aipm_summary_day.png)
+
 AIPM syncs issues from **Jira** and **GitHub** into a local git-tracked directory of Markdown files. It then uses **GitHub Copilot** (with graceful fallback) to summarize changes, update project plans, and generate reports — all from the command line.
 
 > **New here?** Start with the [Tutorial](doc/tutorial.md) — it walks you through setup, tickets, horizons, and daily workflow.\
-> For the planning concept in depth, see [Planning & Time Horizons](doc/planning.md).
+> For the planning concept in depth, see [Planning & Time Horizons](doc/planning.md).\
+> Learn how automated ticket checking works in [Check](doc/check.md).
 
 ---
 
@@ -129,9 +132,10 @@ uv run aipm commit
 | `aipm diff` | Summarize the currently staged git changes using AI (or structured fallback) |
 | `aipm plan` | Update `milestones.md` based on current ticket horizons and statuses |
 | `aipm summary [day\|week\|month\|year\|all] [all\|me\|username]` | Generate a project summary filtered by time horizon and user |
-| `aipm ticket add` | Create a local ticket (interactive or via flags `-t`, `-p`, `-a`, `-d`, `-l`, `--horizon`, `--due`) |
+| `aipm ticket add` | Create a local ticket (interactive or via flags `-t`, `-p`, `-a`, `-d`, `-l`, `--horizon`, `--due`, `--repo`) |
 | `aipm ticket list` | List all local tickets in a table |
 | `aipm ticket upgrade` | Scan existing tickets and interactively fill in missing fields (horizon, priority, etc.) |
+| `aipm check [TICKET_KEY]` | Check ticket completion against configured repos using Copilot |
 | `aipm commit` | Stage AIPM files, generate a commit message, and commit |
 
 ## Time Horizons
@@ -151,6 +155,15 @@ Every ticket carries a horizon that tells you _when_ it should be tackled:
 ```bash
 # Create a ticket with a horizon
 aipm ticket add -t "Fix login crash" --horizon now -p high
+
+# Link a ticket to a repo for checking
+aipm ticket add -t "Add CI pipeline" --horizon week --repo /path/to/project
+
+# Check if tasks are done (most urgent first)
+aipm check
+
+# Check a specific ticket
+aipm check L-0001
 
 # Urgent items only
 aipm summary day
@@ -188,6 +201,7 @@ my-project/
 ├── goals.md           # Project goals
 ├── generated/         # Generated reports (plan, kanban, etc.)
 ├── doc/               # Documentation
+│   ├── check.md       # How automated ticket checking works
 │   ├── planning.md    # Planning concept and horizon reference
 │   └── tutorial.md    # Getting started tutorial
 └── README.md          # Project summary

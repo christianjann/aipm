@@ -117,6 +117,7 @@ def ticket() -> None:
 @click.option("--labels", "-l", default="", help="Comma-separated labels")
 @click.option("--horizon", "-h", default="", help="Time horizon: now, week, next-week, month, year, sometime")
 @click.option("--due", default="", help="Due date (YYYY-MM-DD)")
+@click.option("--repo", "-r", default="", help="Git URL or local path to check task completion against")
 def ticket_add(
     title: str | None,
     status: str,
@@ -126,6 +127,7 @@ def ticket_add(
     labels: str,
     horizon: str,
     due: str,
+    repo: str,
 ) -> None:
     """Create a new local ticket."""
     from aipm.commands.ticket import cmd_ticket_add
@@ -139,6 +141,7 @@ def ticket_add(
         labels=labels,
         horizon=horizon,
         due=due,
+        repo=repo,
     )
 
 
@@ -156,6 +159,23 @@ def ticket_upgrade() -> None:
     from aipm.commands.ticket import cmd_ticket_upgrade
 
     cmd_ticket_upgrade()
+
+
+@main.command()
+@click.argument("ticket_key", required=False, default=None)
+@click.option("--limit", "-n", default=0, help="Maximum number of tickets to check (0 = all)")
+def check(ticket_key: str | None, limit: int) -> None:
+    """Check ticket completion against configured repos.
+
+    Starts with the most urgent tickets. For each ticket with a repo configured,
+    gathers git history / directory context and asks Copilot whether the task
+    has been fulfilled.
+
+    Optionally pass a TICKET_KEY (e.g. L-0001) to check a single ticket.
+    """
+    from aipm.commands.check import cmd_check
+
+    cmd_check(ticket_key=ticket_key, limit=limit)
 
 
 if __name__ == "__main__":
