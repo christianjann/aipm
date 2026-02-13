@@ -114,10 +114,12 @@ def _update_plan_fallback(
 
     # Group by status
     done_statuses = {"done", "closed", "resolved", "complete", "completed"}
-    in_progress_statuses = {"in progress", "in review", "in development", "open"}
+    in_progress_statuses = {"in progress", "in review", "in development", "active"}
+    backlog_statuses = {"open", "to do", "todo", "backlog", "new", "created"}
 
     completed = []
     in_progress = []
+    backlog = []
     remaining = []
 
     for status, tickets in tickets_by_status.items():
@@ -125,6 +127,8 @@ def _update_plan_fallback(
             completed.extend(tickets)
         elif status in in_progress_statuses:
             in_progress.extend(tickets)
+        elif status in backlog_statuses:
+            backlog.extend(tickets)
         else:
             remaining.extend(tickets)
 
@@ -138,8 +142,18 @@ def _update_plan_fallback(
             lines.append(f"- [ ] {title}{suffix}")
         lines.append("")
 
+    if backlog:
+        lines.append("## Backlog")
+        lines.append("")
+        for t in backlog:
+            title = t.get("title", "Unknown")
+            assignee = t.get("assignee", "")
+            suffix = f" ({assignee})" if assignee else ""
+            lines.append(f"- [ ] {title}{suffix}")
+        lines.append("")
+
     if remaining:
-        lines.append("## Upcoming")
+        lines.append("## Other")
         lines.append("")
         for t in remaining:
             title = t.get("title", "Unknown")

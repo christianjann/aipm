@@ -128,8 +128,10 @@ def _generate_summary_fallback(
     lines.append("")
 
     # Active / in-progress items
-    active_statuses = {"open", "in progress", "in review", "in development", "to do"}
+    active_statuses = {"in progress", "in review", "in development", "active"}
+    backlog_statuses = {"open", "to do", "todo", "backlog", "new", "created"}
     active = [t for t in tickets if t.get("status", "").lower() in active_statuses]
+    backlog = [t for t in tickets if t.get("status", "").lower() in backlog_statuses]
 
     if active:
         lines.append("## Active Tasks")
@@ -159,6 +161,19 @@ def _generate_summary_fallback(
             if len(normal) > 15:
                 lines.append(f"- _...and {len(normal) - 15} more_")
             lines.append("")
+
+    # Backlog items
+    if backlog:
+        lines.append(f"## Backlog ({len(backlog)})")
+        lines.append("")
+        for t in backlog[:15]:
+            title = t.get("title", "Unknown")
+            assignee = t.get("assignee", "")
+            suffix = f" ({assignee})" if assignee else ""
+            lines.append(f"- {title}{suffix}")
+        if len(backlog) > 15:
+            lines.append(f"- _...and {len(backlog) - 15} more_")
+        lines.append("")
 
     # Completed items
     done_statuses = {"done", "closed", "resolved", "complete", "completed"}

@@ -1,9 +1,13 @@
 # AIPM - Milestones
 
-## Upcoming
+_Last updated: 2026-02-13 19:36_
 
-<!-- Add milestones here -->
+**Total tickets:** 4
+- Open: 4
 
-## Completed
+## Backlog
 
-<!-- Completed milestones will be moved here -->
+- [ ] L-0001: Create local set tickets for testing (chris)
+- [ ] L-0003: Add generation support for the plans and dashboards (claude)
+- [ ] L-0002: Test and extend copilot integration (chris)
+- [ ] L-0004: Add due date feature (claude)
