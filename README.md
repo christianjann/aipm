@@ -131,7 +131,7 @@ uv run aipm commit
 
 ## Commands
 
-<div align="center">
+
 <table><tr><td>
 
 <div style="background:#333;padding:6px 12px;display:flex;align-items:center;">
@@ -163,7 +163,6 @@ Commands:
 </pre>
 
 </td></tr></table>
-</div>
 
 | Command | Description |
 |---------|-------------|
