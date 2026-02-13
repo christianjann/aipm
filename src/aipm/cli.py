@@ -97,6 +97,25 @@ def summary(period: str, user: str, debug: bool) -> None:
 
 
 @main.command()
+@click.option(
+    "--format",
+    "-f",
+    "fmt",
+    type=click.Choice(["md", "html", "all"]),
+    default="all",
+    help="Output format: md, html, or all (default: all)",
+)
+def report(fmt: str) -> None:
+    """Generate a full set of reports under generated/.
+
+    Creates summaries for every period and user, plus a Gantt-style project plan.
+    """
+    from aipm.commands.report import cmd_report
+
+    cmd_report(fmt=fmt)
+
+
+@main.command()
 def commit() -> None:
     """Commit the updated tickets and plan."""
     from aipm.commands.commit import cmd_commit

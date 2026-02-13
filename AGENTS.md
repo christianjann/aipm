@@ -69,6 +69,7 @@ src/aipm/
 │   ├── summary.py
 │   ├── commit.py
 │   ├── check.py
+│   ├── report.py
 │   └── ticket.py
 └── sources/             # Issue source backends
     ├── base.py          # Abstract base class + Ticket dataclass

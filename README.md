@@ -2,7 +2,11 @@
 
 > Manage large projects distributed over multiple issue trackers and tools — from a single local workspace.
 
+`aipm summary day`:
 ![](doc/images/aipm_summary_day.png)
+
+`aipm ticket list`:
+![](doc/images/aipm_ticket_list.png)
 
 AIPM syncs issues from **Jira** and **GitHub** into a local git-tracked directory of Markdown files. It then uses **GitHub Copilot** (with graceful fallback) to summarize changes, update project plans, and generate reports — all from the command line.
 
@@ -154,6 +158,7 @@ Commands:
   diff     Summarize changes currently staged for commit.
   init     Initialize a new AIPM project in the current directory.
   plan     Update the project plan based on current ticket status.
+  report   Generate a full set of reports under generated/.
   summary  Generate a high-level project summary.
   sync     Sync issues from all configured sources to the tickets directory.
   ticket   Manage local tickets.
@@ -175,6 +180,9 @@ Commands:
 | `aipm ticket add` | Create a local ticket (interactive or via flags `-t`, `-p`, `-a`, `-d`, `-l`, `--horizon`, `--due`, `--repo`) |
 | `aipm ticket list` | List all local tickets in a table |
 | `aipm ticket upgrade` | Scan existing tickets and interactively fill in missing fields (horizon, priority, etc.) |
+| `aipm report` | Generate all reports (summaries + Gantt plan) under `generated/` |
+| `aipm report -f md` | Generate Markdown reports only |
+| `aipm report -f html` | Generate HTML reports only |
 | `aipm check [TICKET_KEY]` | Check ticket completion against configured repos using Copilot |
 | `aipm check --debug` | Check with full Copilot prompt/response output |
 | `aipm commit` | Stage AIPM files, generate a commit message, and commit |
@@ -240,7 +248,12 @@ my-project/
 │       └── 87_refactor_api.md
 ├── milestones.md      # Project milestones grouped by horizon
 ├── goals.md           # Project goals
-├── generated/         # Generated reports (plan, kanban, etc.)
+├── generated/         # Generated reports (summaries, plan)
+│   ├── summary_day.md / .html
+│   ├── summary_week.md / .html
+│   ├── summary_week_alice.md / .html
+│   ├── plan.md / .html
+│   └── ...
 ├── doc/               # Documentation
 │   ├── check.md       # How automated ticket checking works
 │   ├── debug.md       # Debugging and troubleshooting Copilot
