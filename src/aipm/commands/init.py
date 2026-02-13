@@ -28,12 +28,15 @@ def cmd_init() -> None:
 
     # Create directory structure
     tickets_dir = cwd / "tickets"
+    local_dir = tickets_dir / "local"
     generated_dir = cwd / "generated"
 
     tickets_dir.mkdir(exist_ok=True)
+    local_dir.mkdir(exist_ok=True)
     generated_dir.mkdir(exist_ok=True)
 
     console.print("  [green]Created[/green] tickets/")
+    console.print("  [green]Created[/green] tickets/local/")
     console.print("  [green]Created[/green] generated/")
 
     # Create milestones.md

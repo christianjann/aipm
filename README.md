@@ -125,6 +125,8 @@ uv run aipm commit
 | `aipm diff` | Summarize the currently staged git changes using AI (or structured fallback) |
 | `aipm plan` | Update `milestones.md` based on current ticket statuses |
 | `aipm summary [day\|week\|month\|year] [all\|me\|username]` | Generate a high-level project summary for a given period and user |
+| `aipm ticket add` | Create a local ticket (interactive or via flags `-t`, `-p`, `-a`, `-d`, `-l`) |
+| `aipm ticket list` | List all local tickets in a table |
 | `aipm commit` | Stage AIPM files, generate a commit message, and commit |
 
 ## Project Structure
@@ -135,6 +137,9 @@ After running `aipm init`, your workspace will look like this:
 my-project/
 ├── aipm.toml          # Project configuration and source definitions
 ├── tickets/           # Synced issue tickets (one .md per issue)
+│   ├── local/         # Local-only tickets
+│   │   ├── 0001_setup_ci.md
+│   │   └── 0002_write_docs.md
 │   ├── PROJ/          # Jira source
 │   │   ├── PROJ-1_implement_feature.md
 │   │   └── PROJ-2_fix_bug.md

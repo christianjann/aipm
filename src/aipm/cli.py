@@ -103,5 +103,46 @@ def commit() -> None:
     cmd_commit()
 
 
+@main.group()
+def ticket() -> None:
+    """Manage local tickets."""
+
+
+@ticket.command("add")
+@click.option("--title", "-t", default=None, help="Ticket title")
+@click.option("--status", "-s", default="open", help="Ticket status (default: open)")
+@click.option("--priority", "-p", default="", help="Priority: critical, high, medium, low")
+@click.option("--assignee", "-a", default="", help="Assignee")
+@click.option("--description", "-d", default="", help="Description")
+@click.option("--labels", "-l", default="", help="Comma-separated labels")
+def ticket_add(
+    title: str | None,
+    status: str,
+    priority: str,
+    assignee: str,
+    description: str,
+    labels: str,
+) -> None:
+    """Create a new local ticket."""
+    from aipm.commands.ticket import cmd_ticket_add
+
+    cmd_ticket_add(
+        title=title,
+        status=status,
+        priority=priority,
+        assignee=assignee,
+        description=description,
+        labels=labels,
+    )
+
+
+@ticket.command("list")
+def ticket_list() -> None:
+    """List all local tickets."""
+    from aipm.commands.ticket import cmd_ticket_list
+
+    cmd_ticket_list()
+
+
 if __name__ == "__main__":
     main()
