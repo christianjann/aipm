@@ -138,7 +138,7 @@ uv run aipm commit
 🔴 🟡 🟢 &nbsp;&nbsp;<code style="color:#aaa;background:transparent;">~/my-project</code>
 </div>
 
-<pre>
+<pre align="left">
 ❯ aipm --help
 Usage: aipm [OPTIONS] COMMAND [ARGS]...
 
