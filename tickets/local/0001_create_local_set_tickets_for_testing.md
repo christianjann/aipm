@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | open |
+| **Status** | completed |
 | **Horizon** | now |
 | **Assignee** | chris |
 | **Priority** | high |

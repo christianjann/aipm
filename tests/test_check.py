@@ -391,3 +391,33 @@ def test_check_decline_close_keeps_status(work_dir: Path) -> None:
     # Verify the ticket file still has open status
     content = ticket_path.read_text()
     assert "| **Status** | open |" in content
+
+
+def test_check_commit_option_closes_and_commits(work_dir: Path) -> None:
+    """Answering 'c' closes the ticket and creates a git commit."""
+    _init_project(work_dir)
+
+    # Initialize the work_dir itself as a git repo so the commit works
+    _init_git_repo(work_dir)
+
+    target = work_dir / "target"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "feature.py").write_text("# implement the feature\n")
+    subprocess.run(["git", "add", "."], cwd=target, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "implement the feature"], cwd=target, capture_output=True)
+
+    ticket_path = _create_ticket(work_dir, repo=str(target), description="Implement the feature")
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["check"], input="c\n")
+    assert result.exit_code == 0
+    assert "marked as completed and committed" in result.output
+
+    # Verify the ticket file was updated
+    content = ticket_path.read_text()
+    assert "| **Status** | completed |" in content
+
+    # Verify a git commit was created with the expected message
+    log = subprocess.run(["git", "log", "--oneline", "-1"], cwd=work_dir, capture_output=True, text=True)
+    assert "AIPM: Marked L-0001 as completed" in log.stdout

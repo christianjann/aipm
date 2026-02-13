@@ -14,7 +14,7 @@ from rich.panel import Panel
 
 from aipm.config import get_project_root
 from aipm.horizons import horizon_sort_key
-from aipm.utils import git_has_staged_changes, git_stage_files
+from aipm.utils import git_commit, git_has_staged_changes, git_stage_files
 
 console = Console()
 
@@ -438,12 +438,26 @@ def cmd_check(ticket_key: str | None = None, limit: int = 0) -> None:
         console.print(Panel(md, title=f"{key}", border_style=border))
 
         # Ask whether to close the ticket.
-        # When Copilot says DONE → default yes. Otherwise still ask, default no.
+        # Options: y = close, N = skip, c = close + commit
         ticket_path = Path(ticket.get("_path", ""))
-        if ticket_path.exists() and click.confirm(f"  Close ticket {key}?", default=done):
-            _update_ticket_status(ticket_path, "completed")
-            if not git_has_staged_changes(cwd=project_root):
-                git_stage_files([ticket_path], cwd=project_root)
-            console.print(f"  [green]{key} marked as completed.[/green]")
+        if ticket_path.exists():
+            default_hint = "Y/n/c" if done else "y/N/c"
+            choice = click.prompt(
+                f"  Close ticket {key}? [{default_hint}] (c=commit)",
+                type=click.Choice(["y", "n", "c"], case_sensitive=False),
+                default="y" if done else "n",
+                show_choices=False,
+                show_default=False,
+            )
+            if choice in ("y", "c"):
+                _update_ticket_status(ticket_path, "completed")
+                if choice == "c":
+                    git_stage_files([ticket_path], cwd=project_root)
+                    git_commit(f"AIPM: Marked {key} as completed", cwd=project_root)
+                    console.print(f"  [green]{key} marked as completed and committed.[/green]")
+                else:
+                    if not git_has_staged_changes(cwd=project_root):
+                        git_stage_files([ticket_path], cwd=project_root)
+                    console.print(f"  [green]{key} marked as completed.[/green]")
 
         console.print()
