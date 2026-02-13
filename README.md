@@ -8,7 +8,8 @@ AIPM syncs issues from **Jira** and **GitHub** into a local git-tracked director
 
 > **New here?** Start with the [Tutorial](doc/tutorial.md) — it walks you through setup, tickets, horizons, and daily workflow.\
 > For the planning concept in depth, see [Planning & Time Horizons](doc/planning.md).\
-> Learn how automated ticket checking works in [Check](doc/check.md).
+> Learn how automated ticket checking works in [Check](doc/check.md).\
+> Troubleshoot Copilot issues with [Debugging](doc/debug.md).
 
 ---
 
@@ -174,6 +175,7 @@ Commands:
 | `aipm ticket list` | List all local tickets in a table |
 | `aipm ticket upgrade` | Scan existing tickets and interactively fill in missing fields (horizon, priority, etc.) |
 | `aipm check [TICKET_KEY]` | Check ticket completion against configured repos using Copilot |
+| `aipm check --debug` | Check with full Copilot prompt/response output |
 | `aipm commit` | Stage AIPM files, generate a commit message, and commit |
 
 ## Time Horizons
@@ -240,6 +242,7 @@ my-project/
 ├── generated/         # Generated reports (plan, kanban, etc.)
 ├── doc/               # Documentation
 │   ├── check.md       # How automated ticket checking works
+│   ├── debug.md       # Debugging and troubleshooting Copilot
 │   ├── planning.md    # Planning concept and horizon reference
 │   └── tutorial.md    # Getting started tutorial
 └── README.md          # Project summary

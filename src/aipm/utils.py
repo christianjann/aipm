@@ -132,7 +132,7 @@ def copilot_chat(prompt: str, *, timeout: float = 120.0) -> str:
 
             def _handler(event: object) -> None:
                 if getattr(event, "type", None) == SessionEventType.ASSISTANT_MESSAGE:
-                    msg = getattr(event.data, "message", None)  # type: ignore[union-attr]
+                    msg = getattr(event.data, "content", None) or getattr(event.data, "message", None)  # type: ignore[union-attr]
                     if msg:
                         collected.append(msg)
 

@@ -265,6 +265,25 @@ def test_check_runs_against_local_repo(work_dir: Path) -> None:
     assert "Close ticket" in result.output
 
 
+def test_check_debug_mode(work_dir: Path) -> None:
+    """Debug flag prints the Copilot prompt and fallback output."""
+    _init_project(work_dir)
+
+    target = work_dir / "target"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / "feature.py").write_text("# deploy feature\n")
+    subprocess.run(["git", "add", "."], cwd=target, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "deploy feature"], cwd=target, capture_output=True)
+
+    _create_ticket(work_dir, repo=str(target), description="Deploy feature")
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["check", "--debug"], input="n\n")
+    assert result.exit_code == 0
+    assert "Copilot prompt" in result.output
+
+
 def test_check_no_matching_commits(work_dir: Path) -> None:
     """When no commits match the ticket, report NOT STARTED."""
     _init_project(work_dir)
@@ -276,7 +295,7 @@ def test_check_no_matching_commits(work_dir: Path) -> None:
     _create_ticket(work_dir, repo=str(target), description="Deploy to production")
 
     runner = CliRunner()
-    result = runner.invoke(main, ["check"])
+    result = runner.invoke(main, ["check"], input="n\n")
     assert result.exit_code == 0
     assert "No matching commits" in result.output or "NOT STARTED" in result.output
 

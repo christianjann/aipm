@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import click
@@ -20,8 +20,6 @@ console = Console()
 
 # How many recent commits to scan
 _GIT_LOG_LIMIT = 50
-# Max diff size (characters) to send to Copilot
-_MAX_DIFF_SIZE = 12000
 
 
 @dataclass
@@ -30,15 +28,6 @@ class CommitInfo:
 
     hash: str
     message: str
-    diff: str = ""
-
-
-@dataclass
-class CheckResult:
-    """Result of checking a ticket against its repo."""
-
-    relevant_commits: list[CommitInfo] = field(default_factory=list)
-    analysis: str = ""
 
 
 def _parse_all_tickets(project_root: Path) -> list[dict[str, str]]:
@@ -147,19 +136,6 @@ def _get_git_log(repo_path: Path) -> list[CommitInfo]:
     return commits
 
 
-def _get_commit_diff(repo_path: Path, commit_hash: str) -> str:
-    """Get the full diff for a single commit."""
-    result = subprocess.run(
-        ["git", "show", "--stat", "--patch", commit_hash, "--no-decorate"],
-        capture_output=True,
-        text=True,
-        cwd=repo_path,
-    )
-    if result.returncode == 0:
-        return result.stdout
-    return ""
-
-
 def _build_keywords(ticket_info: dict[str, str]) -> list[str]:
     """Extract search keywords from a ticket's title and description."""
     title = ticket_info.get("title", "")
@@ -222,97 +198,73 @@ def _extract_hashes(response: str) -> set[str]:
     return {m.group()[:8] for m in re.finditer(r"\b[0-9a-f]{7,40}\b", response)}
 
 
-def _check_with_copilot_messages(
+def _check_with_copilot(
     ticket_info: dict[str, str],
     commits: list[CommitInfo],
-) -> list[CommitInfo]:
-    """Ask Copilot which commit messages are relevant to the ticket.
+    *,
+    debug: bool = False,
+) -> tuple[list[CommitInfo], str]:
+    """Ask Copilot to identify relevant commits and analyze ticket completion.
 
+    Returns (relevant_commits, analysis_text).
     Falls back to keyword matching when Copilot is unavailable.
     """
-    key = ticket_info.get("key", "?")
-    title = ticket_info.get("title", "?")
-    description = ticket_info.get("description", "")
-
-    commit_list = "\n".join(f"- {c.hash[:8]} {c.message}" for c in commits)
-
-    prompt = (
-        "You are a project manager assistant. Given a ticket and a list of git commits, "
-        "return ONLY the short hashes (first 8 chars) of commits that are relevant to this ticket. "
-        "Return one hash per line, nothing else. If none are relevant, return NONE.\n\n"
-        f"## Ticket {key}: {title}\n"
-        f"Description: {description}\n\n"
-        f"## Commits\n{commit_list}\n"
-    )
-
-    try:
-        response = copilot_chat(prompt)
-        console.print(f"  [dim]Copilot response: {response.strip()[:200]}[/dim]")
-        relevant_hashes = _extract_hashes(response)
-        # Only keep hashes that actually match our commits
-        known_hashes = {c.hash[:8] for c in commits}
-        relevant_hashes &= known_hashes
-        if relevant_hashes:
-            return [c for c in commits if c.hash[:8] in relevant_hashes]
-        # Copilot said NONE — fall through to keyword matching as a second chance
-    except Exception:
-        pass
-
-    # Fallback: keyword matching
-    keywords = _build_keywords(ticket_info)
-    return _filter_commits_by_message(commits, keywords)
-
-
-def _check_with_copilot_diff(
-    ticket_info: dict[str, str],
-    relevant_commits: list[CommitInfo],
-) -> str:
-    """Analyze the diffs of relevant commits against the ticket."""
     key = ticket_info.get("key", "?")
     title = ticket_info.get("title", "?")
     description = ticket_info.get("description", "")
     status = ticket_info.get("status", "")
     horizon = ticket_info.get("horizon", "")
 
-    # Build diff context, truncating if needed
-    diff_parts: list[str] = []
-    total_size = 0
-    for commit in relevant_commits:
-        if not commit.diff:
-            continue
-        entry = f"### Commit {commit.hash[:8]}: {commit.message}\n```diff\n{commit.diff}\n```\n"
-        if total_size + len(entry) > _MAX_DIFF_SIZE:
-            remaining = _MAX_DIFF_SIZE - total_size
-            if remaining > 200:
-                diff_parts.append(entry[:remaining] + "\n... (truncated)")
-            break
-        diff_parts.append(entry)
-        total_size += len(entry)
-
-    diff_context = "\n".join(diff_parts)
+    commit_list = "\n".join(f"- {c.hash[:8]} {c.message}" for c in commits)
 
     prompt = (
-        "You are an AI project manager assistant. Analyze whether this ticket's task "
-        "has been completed based on the relevant git commits and their diffs.\n\n"
-        "Provide:\n"
+        "You are an AI project manager assistant. Given a ticket and a list of recent git commits, "
+        "analyze whether this ticket's task has been completed based on the commit messages.\n\n"
+        "First, list the short hashes (first 8 chars) of ALL relevant commits, one per line, "
+        "prefixed with COMMITS:\n\n"
+        "Then provide your analysis:\n"
         "1. **Status**: DONE, IN PROGRESS, or NOT STARTED\n"
         "2. **Confidence**: High, Medium, or Low\n"
-        "3. **Evidence**: Which commits address the task and what they changed\n"
+        "3. **Evidence**: Which commits address the task (reference by hash)\n"
         "4. **Remaining work**: If not done, what still needs to happen\n\n"
         f"## Ticket {key}: {title}\n"
         f"- Current status: {status}\n"
         f"- Horizon: {horizon}\n"
         f"- Description: {description}\n\n"
-        f"## Relevant Commits & Diffs\n{diff_context}\n"
+        f"## Recent Commits\n{commit_list}\n"
     )
 
+    if debug:
+        console.print(Panel(prompt, title="Copilot prompt", border_style="yellow"))
+
     try:
-        result = copilot_chat(prompt)
-        if not result or not result.strip():
-            return _check_fallback(ticket_info, relevant_commits)
-        return result
+        response = copilot_chat(prompt)
+
+        if not response or not response.strip():
+            console.print("  [dim]Copilot returned empty response, falling back to keywords[/dim]")
+            raise ValueError("Empty response")
+
+        if debug:
+            console.print(Panel(response, title="Copilot response", border_style="yellow"))
+        else:
+            console.print(f"  [dim]Copilot: {response.strip()[:200]}[/dim]")
+
+        # Extract relevant commit hashes from response
+        relevant_hashes = _extract_hashes(response)
+        known_hashes = {c.hash[:8] for c in commits}
+        relevant_hashes &= known_hashes
+
+        relevant = [c for c in commits if c.hash[:8] in relevant_hashes] if relevant_hashes else []
+
+        return relevant, response
     except Exception:
-        return _check_fallback(ticket_info, relevant_commits)
+        pass
+
+    # Fallback: keyword matching + structured summary
+    keywords = _build_keywords(ticket_info)
+    relevant = _filter_commits_by_message(commits, keywords)
+    fallback_text = _check_fallback(ticket_info, relevant)
+    return relevant, fallback_text
 
 
 def _check_fallback(ticket_info: dict[str, str], relevant_commits: list[CommitInfo]) -> str:
@@ -328,7 +280,7 @@ def _check_fallback(ticket_info: dict[str, str], relevant_commits: list[CommitIn
         f"**Description:** {description}\n",
         "---\n",
         f"**{len(relevant_commits)} potentially relevant commit(s) found** "
-        "(Copilot unavailable — review manually):\n",
+        "(matched by keywords — review manually):\n",
     ]
     for commit in relevant_commits:
         lines.append(f"- `{commit.hash[:8]}` {commit.message}")
@@ -336,13 +288,12 @@ def _check_fallback(ticket_info: dict[str, str], relevant_commits: list[CommitIn
     return "\n".join(lines)
 
 
-def cmd_check(ticket_key: str | None = None, limit: int = 0) -> None:
+def cmd_check(ticket_key: str | None = None, limit: int = 0, *, debug: bool = False) -> None:
     """Check ticket completion against configured repos.
 
-    For each ticket with a repo, scans the git log and:
-    1. Filters commits by message relevance (via Copilot or keyword fallback)
-    2. Fetches diffs only for matching commits
-    3. Asks Copilot to analyze whether the task is fulfilled
+    For each ticket with a repo, scans the git log and asks Copilot to identify
+    relevant commits and analyze whether the task is fulfilled, based on commit
+    messages alone (no diffs).
     """
     project_root = get_project_root()
     if project_root is None:
@@ -420,31 +371,16 @@ def cmd_check(ticket_key: str | None = None, limit: int = 0) -> None:
 
         console.print(f"  Found [cyan]{len(commits)}[/cyan] recent commits")
 
-        # Step 2: Filter commits by message relevance
-        with console.status("  Filtering commits by relevance..."):
-            relevant = _check_with_copilot_messages(ticket, commits)
+        # Analyze commits against ticket (single Copilot call on messages only)
+        with console.status("  Analyzing commits..."):
+            relevant, result = _check_with_copilot(ticket, commits, debug=debug)
 
-        if not relevant:
+        if relevant:
+            console.print(f"  [green]{len(relevant)}[/green] relevant commit(s) found:")
+            for c in relevant:
+                console.print(f"    [dim]{c.hash[:8]}[/dim] {c.message}")
+        else:
             console.print("  [yellow]No matching commits found.[/yellow]")
-            console.print(
-                Panel("**Status:** NOT STARTED\n\nNo commits found that match this ticket.",
-                      title=key, border_style="red")
-            )
-            console.print()
-            continue
-
-        console.print(f"  [green]{len(relevant)}[/green] relevant commit(s) found:")
-        for c in relevant:
-            console.print(f"    [dim]{c.hash[:8]}[/dim] {c.message}")
-
-        # Step 3: Fetch diffs for matching commits
-        with console.status("  Fetching diffs..."):
-            for commit in relevant:
-                commit.diff = _get_commit_diff(repo_path, commit.hash)
-
-        # Step 4: Analyze with Copilot
-        with console.status("  Analyzing with Copilot..."):
-            result = _check_with_copilot_diff(ticket, relevant)
 
         done = _analysis_suggests_done(result)
         md = Markdown(result)

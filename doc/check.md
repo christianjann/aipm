@@ -4,40 +4,34 @@
 
 ## How It Works
 
-The check runs in four steps for each ticket:
+The check runs in three steps for each ticket:
 
 ### 1. Read the git log
 
 AIPM resolves the `Repo` field on the ticket (absolute path, relative path like `.`, or `~/…`) and reads the last 50 commits from that repository.
 
-### 2. Filter commits by relevance
+### 2. Analyze commits with Copilot (or fallback)
 
-Only commits whose message relates to the ticket are kept. When Copilot is available it decides which commits match; otherwise AIPM extracts keywords from the ticket title and description and does a simple substring search on commit messages.
-
-### 3. Fetch diffs for matching commits
-
-For each relevant commit, `git show --stat --patch` is called to get the full diff. The diffs are truncated to ~12 000 characters so Copilot doesn't get overloaded.
-
-### 4. Analyze with Copilot (or fallback)
-
-The ticket description plus the relevant diffs are sent to Copilot, which returns:
+All commit messages are sent to Copilot along with the ticket details. Copilot identifies which commits are relevant and returns:
 
 - **Status** — `DONE`, `IN PROGRESS`, or `NOT STARTED`
 - **Confidence** — High, Medium, or Low
 - **Evidence** — which commits address the task
 - **Remaining work** — what's still missing
 
-When Copilot is unavailable the matching commits are listed so you can review them manually.
+When Copilot is unavailable, AIPM extracts keywords from the ticket title and description and matches them against commit messages. The matching commits are listed so you can review them manually.
 
-### 5. Interactive close
+### 3. Interactive close
 
-If the analysis concludes the ticket is **DONE**, AIPM asks whether you want to close it right there:
+If the analysis concludes the ticket is **DONE**, AIPM asks whether you want to close it:
 
 ```
-Close ticket L-0004? [Y/n]:
+Close ticket L-0004? [Y/n/c] (c=commit):
 ```
 
-Accepting updates the ticket's status to `completed` and stages the file with git.
+- **y** — mark as completed and stage the ticket file
+- **n** — skip (default when not done)
+- **c** — mark as completed, stage, and commit with message `AIPM: Marked L-0004 as completed`
 
 ## Copilot-unavailable fallback
 
@@ -56,7 +50,12 @@ aipm check L-0001
 
 # Limit to the 3 most urgent
 aipm check -n 3
+
+# Debug mode — show full Copilot prompt and response
+aipm check --debug
 ```
+
+See [Debugging AIPM](debug.md) for troubleshooting Copilot responses.
 
 ## Configuring the repo
 

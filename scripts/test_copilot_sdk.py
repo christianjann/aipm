@@ -35,11 +35,14 @@ async def _run() -> None:
     def handler(event: object) -> None:
         etype = getattr(event, "type", "?")
         data = getattr(event, "data", None)
+        content = getattr(data, "content", None) if data else None
         msg = getattr(data, "message", None) if data else None
         error_type = getattr(data, "error_type", None) if data else None
-        print(f"  Event: {etype} | msg={msg!r:.100s if msg else 'None'} | error={error_type}", flush=True)
-        if etype == SessionEventType.ASSISTANT_MESSAGE and msg:
-            collected.append(msg)
+        text = content or msg
+        preview = repr(text[:100]) if text else "None"
+        print(f"  Event: {etype} | text={preview} | error={error_type}", flush=True)
+        if etype == SessionEventType.ASSISTANT_MESSAGE and text:
+            collected.append(text)
 
     session.on(handler)
     print("Sending prompt...", flush=True)

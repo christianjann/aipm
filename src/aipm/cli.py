@@ -164,7 +164,8 @@ def ticket_upgrade() -> None:
 @main.command()
 @click.argument("ticket_key", required=False, default=None)
 @click.option("--limit", "-n", default=0, help="Maximum number of tickets to check (0 = all)")
-def check(ticket_key: str | None, limit: int) -> None:
+@click.option("--debug", "-d", is_flag=True, default=False, help="Print Copilot prompt and response for debugging")
+def check(ticket_key: str | None, limit: int, debug: bool) -> None:
     """Check ticket completion against configured repos.
 
     Starts with the most urgent tickets. For each ticket with a repo configured,
@@ -175,7 +176,7 @@ def check(ticket_key: str | None, limit: int) -> None:
     """
     from aipm.commands.check import cmd_check
 
-    cmd_check(ticket_key=ticket_key, limit=limit)
+    cmd_check(ticket_key=ticket_key, limit=limit, debug=debug)
 
 
 if __name__ == "__main__":
