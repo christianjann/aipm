@@ -16,6 +16,10 @@ install:
 uninstall:
     uv tool uninstall aipm
 
+# Install the GitHub Copilot CLI (Linux/macOS)
+install-copilot:
+    curl -fsSL https://gh.io/copilot-install | bash
+
 # Build the package
 build:
     uv build

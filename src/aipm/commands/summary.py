@@ -69,7 +69,7 @@ def _generate_summary_with_copilot(
 ) -> str:
     """Generate summary using Copilot."""
     try:
-        from github_copilot import Copilot
+        from aipm.utils import copilot_chat
 
         # Build ticket info
         ticket_lines = []
@@ -82,7 +82,6 @@ def _generate_summary_with_copilot(
 
         ticket_text = "\n".join(ticket_lines)
 
-        copilot = Copilot()
         prompt = (
             f"You are an AI project manager for '{config.name}'. "
             f"Generate a {period} summary report. "
@@ -98,8 +97,7 @@ def _generate_summary_with_copilot(
             f"## Tickets\n{ticket_text}"
         )
 
-        response = copilot.chat(prompt)
-        return response
+        return copilot_chat(prompt)
     except Exception:
         return _generate_summary_fallback(tickets, period, user, config)
 

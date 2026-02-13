@@ -53,6 +53,78 @@ Then use `aipm` directly:
 aipm <command>
 ```
 
+
+To uninstall:
+
+```bash
+just uninstall
+```
+
+### Copilot CLI (optional, recommended)
+
+AIPM uses the [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli/install-copilot-cli) for AI-powered analysis.
+Without it, all features still work but fall back to keyword-based analysis.
+
+The Python SDK (`github-copilot-sdk`) bundles its own Copilot CLI binary, so you don't need to install it separately.
+However, you **must authenticate** it before first use:
+
+```bash
+# 1. Launch the bundled Copilot CLI in interactive mode:
+.venv/lib64/python3.14/site-packages/copilot/bin/copilot
+
+# 2. Inside the Copilot shell, type:
+/login
+
+# 3. Follow the OAuth device flow to authenticate with your GitHub account.
+# 4. Once authenticated, exit the shell (Ctrl+D or /exit).
+```
+
+Alternatively, you can set a GitHub token in your environment:
+
+```bash
+export GITHUB_TOKEN="your-token-here"
+```
+
+**Manual Copilot CLI install** (useful for debugging and testing):
+
+```bash
+# Linux / macOS:
+just install-copilot
+# or manually:
+curl -fsSL https://gh.io/copilot-install | bash
+
+# Via npm (any platform):
+npm install -g @github/copilot
+```
+
+## Quick Start
+
+```bash
+# 1. Initialize a new project
+uv run aipm init
+
+# 2. Connect your issue trackers
+uv run aipm add jira https://mycompany.atlassian.net/browse/PROJ
+uv run aipm add github https://github.com/owner/repo
+
+# 3. Sync issues to local Markdown files
+uv run aipm sync
+
+# 4. Review what changed
+uv run aipm diff
+
+# 5. Update the project plan
+uv run aipm plan
+
+# 6. Get a summary
+uv run aipm summary week
+
+# 7. Commit everything
+uv run aipm commit
+```
+
+## Commands
+
 <div align="center">
 <table><tr><td>
 <div style="background:#1e1e1e;border-radius:8px;overflow:hidden;border:1px solid #444;">
@@ -88,40 +160,6 @@ Commands:
 </div>
 </td></tr></table>
 </div>
-
-To uninstall:
-
-```bash
-just uninstall
-```
-
-## Quick Start
-
-```bash
-# 1. Initialize a new project
-uv run aipm init
-
-# 2. Connect your issue trackers
-uv run aipm add jira https://mycompany.atlassian.net/browse/PROJ
-uv run aipm add github https://github.com/owner/repo
-
-# 3. Sync issues to local Markdown files
-uv run aipm sync
-
-# 4. Review what changed
-uv run aipm diff
-
-# 5. Update the project plan
-uv run aipm plan
-
-# 6. Get a summary
-uv run aipm summary week
-
-# 7. Commit everything
-uv run aipm commit
-```
-
-## Commands
 
 | Command | Description |
 |---------|-------------|

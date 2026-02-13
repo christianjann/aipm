@@ -4,11 +4,23 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 TESTS_DIR = Path(__file__).parent
 LOCAL_TMP = TESTS_DIR / ".tmp"
+
+
+@pytest.fixture(autouse=True)
+def _no_copilot() -> None:
+    """Prevent tests from calling the real Copilot SDK."""
+    _side_effect = RuntimeError("Copilot disabled in tests")
+    with (
+        patch("aipm.utils.copilot_chat", side_effect=_side_effect),
+        patch("aipm.commands.check.copilot_chat", side_effect=_side_effect),
+    ):
+        yield  # type: ignore[misc]
 
 
 @pytest.fixture()

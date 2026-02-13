@@ -12,6 +12,7 @@ from aipm.commands.check import (
     CommitInfo,
     _analysis_suggests_done,
     _build_keywords,
+    _extract_hashes,
     _filter_commits_by_message,
     _get_git_log,
     _parse_all_tickets,
@@ -177,6 +178,22 @@ def test_filter_commits_no_match() -> None:
     ]
     matching = _filter_commits_by_message(commits, ["deploy", "ci"])
     assert matching == []
+
+
+def test_extract_hashes_various_formats() -> None:
+    """Hashes are extracted from various Copilot response formats."""
+    # Plain hashes
+    assert _extract_hashes("90262d6c\nc2ea5e8a") == {"90262d6c", "c2ea5e8a"}
+    # Backtick-wrapped
+    assert _extract_hashes("`90262d6c`\n`c2ea5e8a`") == {"90262d6c", "c2ea5e8a"}
+    # List items with descriptions
+    assert _extract_hashes("- 90262d6c Add something\n- c2ea5e8a Fix bug") == {"90262d6c", "c2ea5e8a"}
+    # NONE response
+    assert _extract_hashes("NONE") == set()
+    # Mixed prose with hashes
+    assert _extract_hashes("The relevant commits are 90262d6c and c2ea5e8a.") == {"90262d6c", "c2ea5e8a"}
+    # Full 40-char hashes
+    assert "90262d6c" in _extract_hashes("90262d6c1234567890abcdef1234567890abcdef")
 
 
 # --- CLI integration tests ---

@@ -14,7 +14,7 @@ from rich.panel import Panel
 
 from aipm.config import get_project_root
 from aipm.horizons import horizon_sort_key
-from aipm.utils import git_commit, git_has_staged_changes, git_stage_files
+from aipm.utils import copilot_chat, git_commit, git_has_staged_changes, git_stage_files
 
 console = Console()
 
@@ -209,6 +209,19 @@ def _filter_commits_by_message(
     return matching
 
 
+def _extract_hashes(response: str) -> set[str]:
+    """Extract 7-8 char hex hashes from a Copilot response.
+
+    Handles formats like:
+    - plain: ``90262d6c``
+    - backtick-wrapped: ```90262d6c```
+    - list items: ``- 90262d6c Add something``
+    - mixed: ``90262d6c: relevant because...``
+    """
+    # Find all sequences of 7-40 hex chars that look like git hashes
+    return {m.group()[:8] for m in re.finditer(r"\b[0-9a-f]{7,40}\b", response)}
+
+
 def _check_with_copilot_messages(
     ticket_info: dict[str, str],
     commits: list[CommitInfo],
@@ -233,23 +246,21 @@ def _check_with_copilot_messages(
     )
 
     try:
-        from github_copilot import Copilot
-
-        copilot = Copilot()
-        response = copilot.chat(prompt)
-        # Parse hashes from response
-        relevant_hashes = set()
-        for line in response.strip().split("\n"):
-            token = line.strip().lstrip("- ")
-            if len(token) >= 7 and all(c in "0123456789abcdef" for c in token[:8]):
-                relevant_hashes.add(token[:8])
+        response = copilot_chat(prompt)
+        console.print(f"  [dim]Copilot response: {response.strip()[:200]}[/dim]")
+        relevant_hashes = _extract_hashes(response)
+        # Only keep hashes that actually match our commits
+        known_hashes = {c.hash[:8] for c in commits}
+        relevant_hashes &= known_hashes
         if relevant_hashes:
             return [c for c in commits if c.hash[:8] in relevant_hashes]
-        return []
+        # Copilot said NONE — fall through to keyword matching as a second chance
     except Exception:
-        # Fallback: keyword matching
-        keywords = _build_keywords(ticket_info)
-        return _filter_commits_by_message(commits, keywords)
+        pass
+
+    # Fallback: keyword matching
+    keywords = _build_keywords(ticket_info)
+    return _filter_commits_by_message(commits, keywords)
 
 
 def _check_with_copilot_diff(
@@ -296,10 +307,10 @@ def _check_with_copilot_diff(
     )
 
     try:
-        from github_copilot import Copilot
-
-        copilot = Copilot()
-        return copilot.chat(prompt)
+        result = copilot_chat(prompt)
+        if not result or not result.strip():
+            return _check_fallback(ticket_info, relevant_commits)
+        return result
     except Exception:
         return _check_fallback(ticket_info, relevant_commits)
 
@@ -388,7 +399,10 @@ def cmd_check(ticket_key: str | None = None, limit: int = 0) -> None:
         horizon = ticket.get("horizon", "?")
         repo = ticket.get("repo", "")
 
+        description = ticket.get("description", "")
         console.print(f"[bold cyan]({i}/{total})[/bold cyan] {key}: {title}")
+        if description:
+            console.print(f"  [dim]{description[:120]}[/dim]")
         console.print(f"  Horizon: [magenta]{horizon}[/magenta]  Repo: [dim]{repo}[/dim]")
 
         # Step 1: Resolve repo and get git log
@@ -435,7 +449,7 @@ def cmd_check(ticket_key: str | None = None, limit: int = 0) -> None:
         done = _analysis_suggests_done(result)
         md = Markdown(result)
         border = "green" if done else "blue"
-        console.print(Panel(md, title=f"{key}", border_style=border))
+        console.print(Panel(md, title=f"{key}: {title}", border_style=border))
 
         # Ask whether to close the ticket.
         # Options: y = close, N = skip, c = close + commit

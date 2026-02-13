@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 import subprocess
 from pathlib import Path
@@ -108,3 +109,38 @@ def format_markdown_ticket(
         lines.extend(["## Description", "", description, ""])
 
     return "\n".join(lines)
+
+
+def copilot_chat(prompt: str, *, timeout: float = 120.0) -> str:
+    """Send a prompt to the Copilot SDK and return the response text.
+
+    Uses the github-copilot-sdk (``copilot`` package) which provides an async
+    client that spawns a local Copilot CLI server. We run the async flow in a
+    one-shot event loop so callers stay synchronous.
+
+    Raises ``RuntimeError`` when the SDK is unavailable or the request fails.
+    """
+    from copilot import CopilotClient
+    from copilot.generated.session_events import SessionEventType
+
+    async def _run() -> str:
+        client = CopilotClient()
+        await client.start()
+        try:
+            session = await client.create_session()
+            collected: list[str] = []
+
+            def _handler(event: object) -> None:
+                if getattr(event, "type", None) == SessionEventType.ASSISTANT_MESSAGE:
+                    msg = getattr(event.data, "message", None)  # type: ignore[union-attr]
+                    if msg:
+                        collected.append(msg)
+
+            session.on(_handler)
+            await session.send_and_wait({"prompt": prompt}, timeout=timeout)
+            await session.destroy()
+            return "\n".join(collected) if collected else ""
+        finally:
+            await client.stop()
+
+    return asyncio.run(_run())
