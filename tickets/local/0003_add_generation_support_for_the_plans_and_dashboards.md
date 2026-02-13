@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | open |
+| **Status** | completed |
 | **Horizon** | week |
 | **Assignee** | claude |
 | **Priority** | high |
