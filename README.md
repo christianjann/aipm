@@ -133,14 +133,12 @@ uv run aipm commit
 
 <div align="center">
 <table><tr><td>
-<div style="background:#1e1e1e;border-radius:8px;overflow:hidden;border:1px solid #444;">
 
-<!-- Title bar -->
 <div style="background:#333;padding:6px 12px;display:flex;align-items:center;">
 🔴 🟡 🟢 &nbsp;&nbsp;<code style="color:#aaa;background:transparent;">~/my-project</code>
 </div>
 
-```
+<pre>
 ❯ aipm --help
 Usage: aipm [OPTIONS] COMMAND [ARGS]...
 
@@ -162,9 +160,8 @@ Commands:
   summary  Generate a high-level project summary.
   sync     Sync issues from all configured sources to the tickets directory.
   ticket   Manage local tickets.
-```
+</pre>
 
-</div>
 </td></tr></table>
 </div>
 
