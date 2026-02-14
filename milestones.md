@@ -1,16 +1,17 @@
 # AIPM — Milestones
 
-_Last updated: 2026-02-13 22:21_
+_Last updated: 2026-02-14 10:23_
 
-**Total:** 5 tickets · **Open:** 1 · **Completed:** 4
+**Total:** 6 tickets · **Open:** 1 · **Completed:** 5
 
-## This Week (1)
+## This / Next Month (1)
 
-- [ ] L-0003: Add generation support for the plans and dashboards (claude)
+- [ ] L-0006: Test GitHub and Jira Integration
 
-## Completed (4)
+## Completed (5)
 
 - [x] L-0001: Create local set tickets for testing
 - [x] L-0005: Add debug mode for check
+- [x] L-0003: Add generation support for the plans and dashboards
 - [x] L-0002: Test and extend copilot integration
 - [x] L-0004: Add due date feature
