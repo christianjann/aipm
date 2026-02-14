@@ -227,7 +227,7 @@ See [doc/planning.md](doc/planning.md) for the full planning concept.
 
 ## Project Structure
 
-After running `aipm init`, your workspace will look like this:
+After you run `aipm init`, add tickets, and generate reports, your workspace will be organized as follows:
 
 ```
 my-project/
@@ -250,11 +250,6 @@ my-project/
 │   ├── summary_week_alice.md / .html
 │   ├── plan.md / .html
 │   └── ...
-├── doc/               # Documentation
-│   ├── check.md       # How automated ticket checking works
-│   ├── debug.md       # Debugging and troubleshooting Copilot
-│   ├── planning.md    # Planning concept and horizon reference
-│   └── tutorial.md    # Getting started tutorial
 └── README.md          # Project summary
 ```
 
