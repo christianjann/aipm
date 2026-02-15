@@ -1,12 +1,15 @@
 # AIPM — Year Summary
 
-_Generated: 2026-02-15 08:54_  
 _Filter: all users · Period: year_
 
-## Overview (6 tickets)
+## Overview (7 tickets)
 
-- **Open:** 1
+- **Open:** 2
 - **Completed:** 5
+
+## This Week (1)
+
+- L-0007: Evaluate using markdown frontmatter format for ticket sync and storage [open]
 
 ## This / Next Month (1)
 

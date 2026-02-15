@@ -1,6 +1,5 @@
 # AIPM — Week Summary
 
-_Generated: 2026-02-15 08:54_  
 _Filter: claude · Period: week_
 
 ## Overview (2 tickets)

@@ -1,9 +1,9 @@
 # AIPM — Project Plan
 
-_Generated: 2026-02-15 08:54_
 
 | Ticket | Assignee | Status | Horizon | Due |
 |--------|----------|--------|---------|-----|
+| L-0007: Evaluate using markdown frontmatter format for ticket sync and storage |  | open | week |  |
 | L-0006: Test GitHub and Jira Integration |  | open | month |  |
 
 ### Completed (5)

@@ -1,11 +1,15 @@
 # AIPM — Week Summary
 
-_Generated: 2026-02-15 08:54_  
 _Filter: all users · Period: week_
 
-## Overview (3 tickets)
+## Overview (4 tickets)
 
+- **Open:** 1
 - **Completed:** 3
+
+## This Week (1)
+
+- L-0007: Evaluate using markdown frontmatter format for ticket sync and storage [open]
 
 ## Completed (3)
 
