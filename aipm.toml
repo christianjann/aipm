@@ -4,6 +4,7 @@ sources = []
 name = "AIPM"
 description = "Manage large projects distributed over multiple issue trackers and tools — from a single local workspace."
 output_dir = "docs/report"
+url = "https://github.com/christianjann/aipm"
 
 [copilot]
 model = "claude-haiku-4.5"

@@ -35,6 +35,7 @@ class ProjectConfig:
 
     name: str = ""
     description: str = ""
+    url: str = ""
     copilot_model: str = ""
     output_dir: str = "generated"
     sources: list[SourceConfig] = field(default_factory=list)
@@ -44,6 +45,7 @@ class ProjectConfig:
             "project": {
                 "name": self.name,
                 "description": self.description,
+                "url": self.url,
                 "output_dir": self.output_dir,
             },
             "sources": [s.to_dict() for s in self.sources],
@@ -61,6 +63,7 @@ class ProjectConfig:
         return cls(
             name=project.get("name", ""),
             description=project.get("description", ""),
+            url=project.get("url", ""),
             output_dir=project.get("output_dir", "generated"),
             copilot_model=copilot.get("model", ""),
             sources=sources,

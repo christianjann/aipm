@@ -241,8 +241,14 @@ def _generate_plan_html(tickets: list[dict[str, str]], config: ProjectConfig) ->
         done_items = "\n".join(f"<li><s>{_esc(t.get('title', '?'))}</s></li>" for t in done)
         done_rows = f'<h3>Completed ({len(done)})</h3><ul class="done">{done_items}</ul>'
 
+    nav_links = ['<a href="index.html">&larr; Back to index</a>']
+    if config.url:
+        nav_links.append(f'<a href="{_esc(config.url)}">&larr; Back to {config.name}</a>')
+    nav = " | ".join(nav_links)
+
     return _HTML_TEMPLATE.format(
         title=_esc(config.name),
+        nav=nav,
         generated=now.strftime("%Y-%m-%d %H:%M"),
         rows="\n".join(rows),
         done_section=done_rows,
@@ -284,7 +290,7 @@ _HTML_TEMPLATE = """\
 </style>
 </head>
 <body>
-<p class="nav"><a href="index.html">&larr; Back to index</a></p>
+<p class="nav">{nav}</p>
 <h1>{title} — Project Plan</h1>
 <p class="meta">Generated: {generated} · {open_count} open · {done_count} completed</p>
 <table>
@@ -304,7 +310,7 @@ _HTML_TEMPLATE = """\
 # ---------------------------------------------------------------------------
 
 
-def _md_to_html(md_text: str, title: str) -> str:
+def _md_to_html(md_text: str, title: str, config: ProjectConfig) -> str:
     """Convert a Markdown summary to a styled HTML page (simple converter)."""
     _esc = html.escape
     body_lines: list[str] = []
@@ -350,7 +356,11 @@ def _md_to_html(md_text: str, title: str) -> str:
         body_lines.append("</ul>")
 
     body_html = "\n".join(body_lines)
-    return _SUMMARY_HTML_TEMPLATE.format(title=_esc(title), body=body_html)
+    nav_links = ['<a href="index.html">&larr; Back to index</a>']
+    if config.url:
+        nav_links.append(f'<a href="{_esc(config.url)}">&larr; Back to {config.name}</a>')
+    nav = " | ".join(nav_links)
+    return _SUMMARY_HTML_TEMPLATE.format(title=_esc(title), nav=nav, body=body_html)
 
 
 _SUMMARY_HTML_TEMPLATE = """\
@@ -386,7 +396,7 @@ _SUMMARY_HTML_TEMPLATE = """\
 </style>
 </head>
 <body>
-<p class="nav"><a href="index.html">&larr; Back to index</a></p>
+<p class="nav">{nav}</p>
 {body}
 </body>
 </html>
@@ -436,11 +446,14 @@ def _generate_index_html(
         inner = "\n".join(items)
         return f"<h2>{_esc(title)}</h2>\n<ul>{inner}</ul>"
 
-    body_parts = [
+    body_parts = []
+    if config.url:
+        body_parts.append(f'<p><a href="{_esc(config.url)}">← Back to {config.name}</a></p>')
+    body_parts.extend([
         _section("Summaries (all users)", summary_links),
         _section("Per-user summaries", user_links),
         _section("Project plan", plan_links),
-    ]
+    ])
     body = "\n".join(p for p in body_parts if p)
 
     return _INDEX_HTML_TEMPLATE.format(
@@ -526,7 +539,7 @@ def cmd_report(fmt: str = "all") -> None:
                 files_written.append(str(path.relative_to(project_root)))
             if write_html:
                 path = gen_dir / f"{name}.html"
-                path.write_text(_md_to_html(md_text, f"{config.name} — {period.title()} Summary"))
+                path.write_text(_md_to_html(md_text, f"{config.name} — {period.title()} Summary", config))
                 files_written.append(str(path.relative_to(project_root)))
                 html_index_entries.append((f"{name}.html", f"{period.title()} Summary (all users)"))
 
@@ -544,7 +557,7 @@ def cmd_report(fmt: str = "all") -> None:
                     files_written.append(str(path.relative_to(project_root)))
                 if write_html:
                     path = gen_dir / f"{name}.html"
-                    path.write_text(_md_to_html(md_text, f"{config.name} — {period.title()} Summary ({user})"))
+                    path.write_text(_md_to_html(md_text, f"{config.name} — {period.title()} Summary ({user})", config))
                     files_written.append(str(path.relative_to(project_root)))
                     html_index_entries.append((f"{name}.html", f"{period.title()} Summary ({user})"))
 
