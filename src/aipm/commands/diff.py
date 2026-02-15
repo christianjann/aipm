@@ -30,8 +30,10 @@ def _read_project_context(project_root: Path) -> str:
     return "\n\n".join(context_parts)
 
 
-def _summarize_with_copilot(diff: str, context: str) -> str:
-    """Use GitHub Copilot SDK to summarize the diff."""
+def _summarize_with_copilot(diff: str, context: str, offline: bool = False) -> str:
+    """Use GitHub Copilot SDK to summarize the diff, unless offline."""
+    if offline:
+        return _summarize_fallback(diff)
     try:
         from github_copilot import Copilot
 
@@ -96,8 +98,8 @@ def _summarize_fallback(diff: str) -> str:
     return "\n".join(summary_parts)
 
 
-def cmd_diff() -> None:
-    """Summarize the staged changes using AI."""
+def cmd_diff(offline: bool = False) -> None:
+    """Summarize the staged changes using AI or offline fallback."""
     project_root = get_project_root()
     if project_root is None:
         console.print("[red]No AIPM project found. Run 'aipm init' first.[/red]")
@@ -114,6 +116,6 @@ def cmd_diff() -> None:
 
     console.print("[bold]Analyzing staged changes...[/bold]\n")
 
-    summary = _summarize_with_copilot(diff, context)
+    summary = _summarize_with_copilot(diff, context, offline=offline)
     md = Markdown(summary)
     console.print(md)

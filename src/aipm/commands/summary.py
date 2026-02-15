@@ -68,8 +68,11 @@ def _generate_summary_with_copilot(
     milestones: str,
     *,
     debug: bool = False,
-) -> str:
-    """Generate summary using Copilot."""
+    offline: bool = False,
+) -> tuple[str, bool]:
+    """Generate summary using Copilot unless offline. Returns (text, used_copilot)."""
+    if offline:
+        return _generate_summary_fallback(tickets, period, user, config), False
     try:
         from aipm.utils import ModelUnavailableError, copilot_chat, select_copilot_model
 
@@ -107,12 +110,12 @@ def _generate_summary_with_copilot(
 
         if not result or not result.strip():
             console.print("  [dim]Copilot returned empty response, using fallback[/dim]")
-            return _generate_summary_fallback(tickets, period, user, config)
+            return _generate_summary_fallback(tickets, period, user, config), False
 
         if debug:
             console.print(Panel(result, title="Copilot response", border_style="yellow"))
 
-        return result
+        return result, True
     except ModelUnavailableError:
         new_model = select_copilot_model()
         try:
@@ -121,12 +124,12 @@ def _generate_summary_with_copilot(
             if result and result.strip():
                 if debug:
                     console.print(Panel(result, title="Copilot response", border_style="yellow"))
-                return result
+                return result, True
         except Exception:
             pass
-        return _generate_summary_fallback(tickets, period, user, config)
+        return _generate_summary_fallback(tickets, period, user, config), False
     except Exception:
-        return _generate_summary_fallback(tickets, period, user, config)
+        return _generate_summary_fallback(tickets, period, user, config), False
 
 
 def _generate_summary_fallback(
@@ -258,8 +261,8 @@ def _generate_summary_fallback(
     return "\n".join(lines)
 
 
-def cmd_summary(period: str = "week", user: str = "all", *, debug: bool = False) -> None:
-    """Generate a high-level project summary."""
+def cmd_summary(period: str = "week", user: str = "all", *, debug: bool = False, offline: bool = False) -> None:
+    """Generate a high-level project summary, offline disables Copilot."""
     project_root = get_project_root()
     if project_root is None:
         console.print("[red]No AIPM project found. Run 'aipm init' first.[/red]")
@@ -290,7 +293,11 @@ def cmd_summary(period: str = "week", user: str = "all", *, debug: bool = False)
     if milestones_path.exists():
         milestones = milestones_path.read_text()
 
-    summary_text = _generate_summary_with_copilot(tickets, period, user, config, goals, milestones, debug=debug)
+    summary_text, used_copilot = _generate_summary_with_copilot(
+        tickets, period, user, config, goals, milestones, debug=debug, offline=offline
+    )
 
-    md = Markdown(summary_text)
+    # Indicate mode used
+    mode_note = f"Mode: {'Copilot' if used_copilot else 'Offline/Fallback'}"
+    md = Markdown(summary_text + f"\n\n{mode_note}")
     console.print(Panel(md, title=f"{period.title()} Summary", border_style="blue"))

@@ -12,29 +12,40 @@ console = Console()
 
 @click.group()
 @click.version_option(version=__version__, prog_name="aipm")
-def main() -> None:
+@click.option(
+    "--offline",
+    is_flag=True,
+    default=False,
+    help="Run all commands offline (no Copilot usage)",
+)
+def main(offline: bool = False) -> None:
     """AIPM - The AI Project Manager.
 
     Manage large projects distributed over multiple issue trackers and tools.
     """
+    # Store offline flag in context
+    click.get_current_context().obj = {"offline": offline}
 
 
 @main.command()
-def init() -> None:
+@click.pass_obj
+def init(obj: dict | None = None) -> None:
     """Initialize a new AIPM project in the current directory."""
     from aipm.commands.init import cmd_init
 
-    cmd_init()
+    cmd_init(offline=obj.get("offline", False) if obj else False)
 
 
 @main.group()
-def add() -> None:
+@click.pass_obj
+def add(obj: dict | None = None) -> None:
     """Add an issue source to the project."""
 
 
 @add.command("jira")
 @click.argument("url")
-def add_jira(url: str) -> None:
+@click.pass_obj
+def add_jira(obj: dict, url: str) -> None:
     """Add a Jira project as an issue source.
 
     URL should be the Jira server URL, e.g. https://mycompany.atlassian.net
@@ -42,50 +53,55 @@ def add_jira(url: str) -> None:
     """
     from aipm.commands.add import cmd_add_jira
 
-    cmd_add_jira(url)
+    cmd_add_jira(url, offline=obj.get("offline", False) if obj else False)
 
 
 @add.command("github")
 @click.argument("url")
-def add_github(url: str) -> None:
+@click.pass_obj
+def add_github(obj: dict, url: str) -> None:
     """Add a GitHub repository as an issue source.
 
     URL should be the GitHub repo URL, e.g. https://github.com/owner/repo
     """
     from aipm.commands.add import cmd_add_github
 
-    cmd_add_github(url)
+    cmd_add_github(url, offline=obj.get("offline", False) if obj else False)
 
 
 @main.command()
-def sync() -> None:
+@click.pass_obj
+def sync(obj: dict | None = None) -> None:
     """Sync issues from all configured sources to the tickets directory."""
     from aipm.commands.sync import cmd_sync
 
-    cmd_sync()
+    cmd_sync(offline=obj.get("offline", False) if obj else False)
 
 
 @main.command("diff")
-def diff_cmd() -> None:
+@click.pass_obj
+def diff_cmd(obj: dict | None = None) -> None:
     """Summarize changes currently staged for commit."""
     from aipm.commands.diff import cmd_diff
 
-    cmd_diff()
+    cmd_diff(offline=obj.get("offline", False) if obj else False)
 
 
 @main.command()
-def plan() -> None:
+@click.pass_obj
+def plan(obj: dict | None = None) -> None:
     """Update the project plan based on current ticket status."""
     from aipm.commands.plan import cmd_plan
 
-    cmd_plan()
+    cmd_plan(offline=obj.get("offline", False) if obj else False)
 
 
 @main.command()
 @click.argument("period", default="week", type=click.Choice(["day", "week", "month", "year", "all"]))
 @click.argument("user", default="all")
 @click.option("--debug", "-d", is_flag=True, default=False, help="Print Copilot prompt and response for debugging")
-def summary(period: str, user: str, debug: bool) -> None:
+@click.pass_obj
+def summary(obj: dict, period: str, user: str, debug: bool) -> None:
     """Generate a high-level project summary.
 
     PERIOD: day, week, month, year, or all (default: week)
@@ -93,7 +109,7 @@ def summary(period: str, user: str, debug: bool) -> None:
     """
     from aipm.commands.summary import cmd_summary
 
-    cmd_summary(period=period, user=user, debug=debug)
+    cmd_summary(period=period, user=user, debug=debug, offline=obj.get("offline", False) if obj else False)
 
 
 @main.command()
@@ -110,26 +126,29 @@ def summary(period: str, user: str, debug: bool) -> None:
     is_flag=True,
     help="Include generation timestamp in reports",
 )
-def report(fmt: str, date: bool) -> None:
+@click.pass_obj
+def report(obj: dict, fmt: str, date: bool) -> None:
     """Generate a full set of reports under the configured output directory.
 
     Creates summaries for every period and user, plus a project plan.
     """
     from aipm.commands.report import cmd_report
 
-    cmd_report(fmt=fmt, include_date=date)
+    cmd_report(fmt=fmt, include_date=date, offline=obj.get("offline", False) if obj else False)
 
 
 @main.command()
-def commit() -> None:
+@click.pass_obj
+def commit(obj: dict | None = None) -> None:
     """Commit the updated tickets and plan."""
     from aipm.commands.commit import cmd_commit
 
-    cmd_commit()
+    cmd_commit(offline=obj.get("offline", False) if obj else False)
 
 
 @main.group()
-def ticket() -> None:
+@click.pass_obj
+def ticket(obj: dict | None = None) -> None:
     """Manage local tickets."""
 
 
@@ -143,7 +162,9 @@ def ticket() -> None:
 @click.option("--horizon", "-h", default="", help="Time horizon: now, week, next-week, month, year, sometime")
 @click.option("--due", default="", help="Due date (YYYY-MM-DD)")
 @click.option("--repo", "-r", default="", help="Git URL or local path to check task completion against")
+@click.pass_obj
 def ticket_add(
+    obj: dict,
     title: str | None,
     status: str,
     priority: str,
@@ -167,30 +188,34 @@ def ticket_add(
         horizon=horizon,
         due=due,
         repo=repo,
+        offline=obj.get("offline", False) if obj else False,
     )
 
 
 @ticket.command("list")
-def ticket_list() -> None:
+@click.pass_obj
+def ticket_list(obj: dict | None = None) -> None:
     """List all local tickets."""
     from aipm.commands.ticket import cmd_ticket_list
 
-    cmd_ticket_list()
+    cmd_ticket_list(offline=obj.get("offline", False) if obj else False)
 
 
 @ticket.command("upgrade")
-def ticket_upgrade() -> None:
+@click.pass_obj
+def ticket_upgrade(obj: dict | None = None) -> None:
     """Upgrade existing tickets by filling in missing fields (horizon, due, etc.)."""
     from aipm.commands.ticket import cmd_ticket_upgrade
 
-    cmd_ticket_upgrade()
+    cmd_ticket_upgrade(offline=obj.get("offline", False) if obj else False)
 
 
 @main.command()
 @click.argument("ticket_key", required=False, default=None)
 @click.option("--limit", "-n", default=0, help="Maximum number of tickets to check (0 = all)")
 @click.option("--debug", "-d", is_flag=True, default=False, help="Print Copilot prompt and response for debugging")
-def check(ticket_key: str | None, limit: int, debug: bool) -> None:
+@click.pass_obj
+def check(obj: dict, ticket_key: str | None, limit: int, debug: bool) -> None:
     """Check ticket completion against configured repos.
 
     Starts with the most urgent tickets. For each ticket with a repo configured,
@@ -201,7 +226,7 @@ def check(ticket_key: str | None, limit: int, debug: bool) -> None:
     """
     from aipm.commands.check import cmd_check
 
-    cmd_check(ticket_key=ticket_key, limit=limit, debug=debug)
+    cmd_check(ticket_key=ticket_key, limit=limit, debug=debug, offline=obj.get("offline", False) if obj else False)
 
 
 if __name__ == "__main__":

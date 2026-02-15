@@ -54,8 +54,11 @@ def _update_plan_with_copilot(
     current_milestones: str,
     current_goals: str,
     project_name: str,
+    offline: bool = False,
 ) -> str:
-    """Use Copilot to generate an updated plan."""
+    """Use Copilot to generate an updated plan, unless offline."""
+    if offline:
+        return _update_plan_fallback(tickets, project_name)
     try:
         from github_copilot import Copilot
 
@@ -167,8 +170,8 @@ def _update_plan_fallback(
     return "\n".join(lines)
 
 
-def cmd_plan() -> None:
-    """Update the project plan based on current ticket status."""
+def cmd_plan(offline: bool = False) -> None:
+    """Update the project plan based on current ticket status, offline disables Copilot."""
     project_root = get_project_root()
     if project_root is None:
         console.print("[red]No AIPM project found. Run 'aipm init' first.[/red]")
@@ -198,6 +201,7 @@ def cmd_plan() -> None:
         current_milestones,
         current_goals,
         config.name,
+        offline=offline,
     )
 
     # Write updated milestones

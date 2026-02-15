@@ -41,6 +41,7 @@ def cmd_ticket_add(
     horizon: str = "",
     due: str = "",
     repo: str = "",
+    offline: bool = False,
 ) -> None:
     """Create a new local ticket."""
     project_root = get_project_root()
@@ -138,7 +139,7 @@ def cmd_ticket_add(
     git_stage_files([filepath], cwd=project_root)
 
 
-def cmd_ticket_list() -> None:
+def cmd_ticket_list(offline: bool = False) -> None:
     """List all local tickets."""
     project_root = get_project_root()
     if project_root is None:
@@ -213,7 +214,7 @@ def _extract_description(content: str) -> str:
     return "\n".join(desc_lines).strip()
 
 
-def cmd_ticket_upgrade() -> None:
+def cmd_ticket_upgrade(offline: bool = False) -> None:
     """Scan local tickets for missing fields and interactively fill them in."""
     project_root = get_project_root()
     if project_root is None:

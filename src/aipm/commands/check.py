@@ -248,11 +248,11 @@ def _check_with_copilot(
     commits: list[CommitInfo],
     *,
     debug: bool = False,
-) -> tuple[list[CommitInfo], str]:
-    """Ask Copilot to identify relevant commits and analyze ticket completion.
+    offline: bool = False,
+) -> tuple[list[CommitInfo], str, bool]:
+    """Ask Copilot to identify relevant commits and analyze ticket completion, unless offline.
 
-    Returns (relevant_commits, analysis_text).
-    Falls back to keyword matching when Copilot is unavailable.
+    Returns (relevant_commits, analysis_text, used_copilot).
     """
     key = ticket_info.get("key", "?")
     title = ticket_info.get("title", "?")
@@ -279,6 +279,13 @@ def _check_with_copilot(
         f"## Recent Commits\n{commit_list}\n"
     )
 
+    if offline:
+        # Fallback: keyword matching + structured summary
+        keywords = _build_keywords(ticket_info)
+        relevant = _filter_commits_by_message(commits, keywords)
+        fallback_text = _check_fallback(ticket_info, relevant)
+        return relevant, fallback_text, False
+
     if debug:
         console.print(Panel(prompt, title="Copilot prompt", border_style="yellow"))
 
@@ -301,7 +308,7 @@ def _check_with_copilot(
 
         relevant = [c for c in commits if c.hash[:8] in relevant_hashes] if relevant_hashes else []
 
-        return relevant, response
+        return relevant, response, True
     except ModelUnavailableError:
         new_model = select_copilot_model()
         try:
@@ -310,12 +317,12 @@ def _check_with_copilot(
                 if debug:
                     console.print(Panel(response, title="Copilot response", border_style="yellow"))
                 else:
-                    console.print(f"  [dim]Copilot: {response.strip()[:200]}[/dim]")
+                    console.print(f"  Copilot: {response.strip()[:200]}")
                 relevant_hashes = _extract_hashes(response)
                 known_hashes = {c.hash[:8] for c in commits}
                 relevant_hashes &= known_hashes
                 relevant = [c for c in commits if c.hash[:8] in relevant_hashes] if relevant_hashes else []
-                return relevant, response
+                return relevant, response, True
         except Exception:
             pass
     except Exception:
@@ -325,7 +332,7 @@ def _check_with_copilot(
     keywords = _build_keywords(ticket_info)
     relevant = _filter_commits_by_message(commits, keywords)
     fallback_text = _check_fallback(ticket_info, relevant)
-    return relevant, fallback_text
+    return relevant, fallback_text, False
 
 
 def _check_fallback(ticket_info: dict[str, str], relevant_commits: list[CommitInfo]) -> str:
@@ -348,13 +355,8 @@ def _check_fallback(ticket_info: dict[str, str], relevant_commits: list[CommitIn
     return "\n".join(lines)
 
 
-def cmd_check(ticket_key: str | None = None, limit: int = 0, *, debug: bool = False) -> None:
-    """Check ticket completion against configured repos.
-
-    For each ticket with a repo, scans the git log and asks Copilot to identify
-    relevant commits and analyze whether the task is fulfilled, based on commit
-    messages alone (no diffs).
-    """
+def cmd_check(ticket_key: str | None = None, limit: int = 0, *, debug: bool = False, offline: bool = False) -> None:
+    """Check ticket completion against configured repos, offline disables Copilot."""
     project_root = get_project_root()
     if project_root is None:
         console.print("[red]No AIPM project found. Run 'aipm init' first.[/red]")
@@ -433,7 +435,7 @@ def cmd_check(ticket_key: str | None = None, limit: int = 0, *, debug: bool = Fa
 
         # Analyze commits against ticket (single Copilot call on messages only)
         with console.status("  Analyzing commits..."):
-            relevant, result = _check_with_copilot(ticket, commits, debug=debug)
+            relevant, result, used_copilot = _check_with_copilot(ticket, commits, debug=debug, offline=offline)
 
         if relevant:
             console.print(f"  [green]{len(relevant)}[/green] relevant commit(s) found:")
@@ -443,7 +445,8 @@ def cmd_check(ticket_key: str | None = None, limit: int = 0, *, debug: bool = Fa
             console.print("  [yellow]No matching commits found.[/yellow]")
 
         done = _analysis_suggests_done(result)
-        md = Markdown(result)
+        mode_note = f"Mode: {'Copilot' if used_copilot else 'Offline/Fallback'}"
+        md = Markdown(result + f"\n\n{mode_note}")
         border = "green" if done else "blue"
         console.print(Panel(md, title=f"{key}: {title}", border_style=border))
 

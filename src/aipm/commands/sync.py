@@ -53,7 +53,7 @@ def write_ticket_file(ticket: Ticket, tickets_dir: Path) -> Path:
     return filepath
 
 
-def cmd_sync() -> None:
+def cmd_sync(offline: bool = False) -> None:
     """Sync issues from all configured sources to the tickets directory."""
     project_root = get_project_root()
     if project_root is None:

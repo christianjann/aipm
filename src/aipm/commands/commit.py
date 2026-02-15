@@ -14,8 +14,10 @@ from aipm.utils import git_commit, git_has_staged_changes, git_stage_files, git_
 console = Console()
 
 
-def _generate_commit_message(diff: str, config: ProjectConfig) -> str:
-    """Generate a commit message from the diff."""
+def _generate_commit_message(diff: str, config: ProjectConfig, offline: bool = False) -> str:
+    """Generate a commit message from the diff, using Copilot unless offline."""
+    if offline:
+        return _generate_commit_message_fallback(diff, config)
     try:
         from github_copilot import Copilot
 
@@ -60,8 +62,8 @@ def _generate_commit_message_fallback(diff: str, config: ProjectConfig) -> str:
     return f"chore(aipm): {', '.join(parts)} [{now}]"
 
 
-def cmd_commit() -> None:
-    """Commit the updated tickets and plan."""
+def cmd_commit(offline: bool = False) -> None:
+    """Commit the updated tickets and plan, offline disables Copilot."""
     project_root = get_project_root()
     if project_root is None:
         console.print("[red]No AIPM project found. Run 'aipm init' first.[/red]")
@@ -98,7 +100,7 @@ def cmd_commit() -> None:
         return
 
     # Generate commit message
-    suggested_message = _generate_commit_message(diff, config)
+    suggested_message = _generate_commit_message(diff, config, offline=offline)
     console.print(f"\nSuggested commit message: [cyan]{suggested_message}[/cyan]")
 
     message = click.prompt("Commit message", default=suggested_message)

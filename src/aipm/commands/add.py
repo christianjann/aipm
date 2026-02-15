@@ -13,7 +13,7 @@ from aipm.config import ProjectConfig, SourceConfig
 console = Console()
 
 
-def cmd_add_jira(url: str) -> None:
+def cmd_add_jira(url: str, offline: bool = False) -> None:
     """Add a Jira project as an issue source."""
     config = ProjectConfig.load()
     project_root = Path.cwd()
@@ -70,7 +70,7 @@ def cmd_add_jira(url: str) -> None:
     console.print(f"[green]Added Jira source:[/green] {name} ({base_url}, project: {project_key})")
 
 
-def cmd_add_github(url: str) -> None:
+def cmd_add_github(url: str, offline: bool = False) -> None:
     """Add a GitHub repository as an issue source."""
     config = ProjectConfig.load()
     project_root = Path.cwd()

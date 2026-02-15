@@ -12,7 +12,7 @@ from aipm.config import CONFIG_FILENAME, ProjectConfig
 console = Console()
 
 
-def cmd_init() -> None:
+def cmd_init(offline: bool = False) -> None:
     """Initialize a new AIPM project in the current directory."""
     cwd = Path.cwd()
 

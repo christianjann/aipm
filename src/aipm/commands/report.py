@@ -518,7 +518,7 @@ _INDEX_HTML_TEMPLATE = """\
 """
 
 
-def cmd_report(fmt: str = "all", include_date: bool = False) -> None:
+def cmd_report(fmt: str = "all", include_date: bool = False, offline: bool = False) -> None:
     """Generate a full set of project reports under the configured output directory.
 
     Creates:
