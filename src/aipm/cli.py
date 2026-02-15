@@ -106,7 +106,7 @@ def summary(period: str, user: str, debug: bool) -> None:
     help="Output format: md, html, or all (default: all)",
 )
 def report(fmt: str) -> None:
-    """Generate a full set of reports under generated/.
+    """Generate a full set of reports under the configured output directory.
 
     Creates summaries for every period and user, plus a Gantt-style project plan.
     """

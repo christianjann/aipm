@@ -1,4 +1,4 @@
-"""aipm report - Generate a full set of project reports under generated/."""
+"""aipm report - Generate a full set of project reports under the configured output directory."""
 
 from __future__ import annotations
 
@@ -485,7 +485,7 @@ _INDEX_HTML_TEMPLATE = """\
 
 
 def cmd_report(fmt: str = "all") -> None:
-    """Generate a full set of project reports under generated/.
+    """Generate a full set of project reports under the configured output directory.
 
     Creates:
     - summary_{period}.{ext} for day/week/month/year (all users)
@@ -498,8 +498,8 @@ def cmd_report(fmt: str = "all") -> None:
         return
 
     config = ProjectConfig.load(project_root)
-    gen_dir = project_root / "generated"
-    gen_dir.mkdir(exist_ok=True)
+    gen_dir = project_root / config.output_dir
+    gen_dir.mkdir(parents=True, exist_ok=True)
 
     tickets = _collect_all_tickets(project_root)
     if not tickets:
@@ -567,7 +567,7 @@ def cmd_report(fmt: str = "all") -> None:
             path.write_text(_generate_index_html(config, html_index_entries))
             files_written.append(str(path.relative_to(project_root)))
 
-    console.print(f"\n[green]Generated {len(files_written)} report(s) in generated/:[/green]")
+    console.print(f"\n[green]Generated {len(files_written)} report(s) in {config.output_dir}/:[/green]")
     for f in files_written:
         console.print(f"  [dim]{f}[/dim]")
     console.print()
