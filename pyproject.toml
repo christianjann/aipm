@@ -47,10 +47,12 @@ known-first-party = ["aipm"]
 
 [tool.ty]
 
+
 [dependency-groups]
 dev = [
     "pytest>=8.0",
     "ruff>=0.9",
     "ty>=0.0",
     "pip-audit>=2.0",
+    "pre-commit>=3.0",
 ]

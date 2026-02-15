@@ -283,3 +283,23 @@ uv run pytest tests/ -v
 ## License
 
 MIT
+
+---
+
+## Contributing & Git Hooks
+
+This repo uses [pre-commit](https://pre-commit.com/) to ensure code quality before every commit. The pre-commit hook will automatically run `just_precommit` and other checks.
+
+**Setup (one-time):**
+
+```bash
+uv sync --dev
+uv run pre-commit install
+```
+
+After setup, every commit will run the checks automatically. If any check fails, the commit will be aborted.
+
+- To run the checks manually: `uv run pre-commit run --all-files`
+- To update hooks: `uv run pre-commit autoupdate`
+
+See `.pre-commit-config.yaml` for details.

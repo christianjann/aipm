@@ -68,3 +68,6 @@ clean:
     rm -rf dist/ build/ .pytest_cache/ .ruff_cache/ tests/.tmp/
     find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
     find . -type f -name "*.pyc" -delete 2>/dev/null || true
+
+# Run all pre-commit checks
+pre-commit: fmt-check lint test
