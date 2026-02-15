@@ -142,6 +142,10 @@ def _update_ticket_status(ticket_path: Path, new_status: str) -> None:
     """Update the Status field in a ticket markdown file."""
     from aipm.utils import format_markdown_ticket
 
+    # Check if original file ends with newline
+    original_content = ticket_path.read_text()
+    ends_with_newline = original_content.endswith("\n")
+
     # Parse the current ticket
     ticket_data = _parse_ticket_file(ticket_path)
     ticket_data["status"] = new_status
@@ -162,6 +166,13 @@ def _update_ticket_status(ticket_path: Path, new_status: str) -> None:
         horizon=ticket_data.get("horizon", "sometime"),
         due=ticket_data.get("due", ""),
     )
+
+    # Preserve trailing newline
+    if ends_with_newline and not content.endswith("\n"):
+        content += "\n"
+    elif not ends_with_newline and content.endswith("\n"):
+        content = content.rstrip("\n")
+
     ticket_path.write_text(content)
 
 
