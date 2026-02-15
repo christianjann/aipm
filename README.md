@@ -14,7 +14,8 @@ AIPM syncs issues from **Jira** and **GitHub** into a local git-tracked director
 > For the planning concept in depth, see [Planning & Time Horizons](doc/planning.md).\
 > Learn how automated ticket checking works in [Check](doc/check.md).\
 > See how AI-powered project reports work in [Summary](doc/summary.md).\
-> Troubleshoot Copilot issues with [Debugging](doc/debug.md).
+> Troubleshoot Copilot issues with [Debugging](doc/debug.md).\
+> Extend AIPM with custom [Skills](doc/skills.md).
 
 ---
 
