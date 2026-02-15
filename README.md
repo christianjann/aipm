@@ -176,12 +176,14 @@ Commands:
 | `aipm ticket add` | Create a local ticket (interactive or via flags `-t`, `-p`, `-a`, `-d`, `-l`, `--horizon`, `--due`, `--repo`) |
 | `aipm ticket list` | List all local tickets in a table |
 | `aipm ticket upgrade` | Scan existing tickets and interactively fill in missing fields (horizon, priority, etc.) |
-| `aipm report` | Generate all reports (summaries + Gantt plan) under `generated/` |
+| `aipm report` | Generate all reports (summaries + project plan) under the configured output directory |
 | `aipm report -f md` | Generate Markdown reports only |
 | `aipm report -f html` | Generate HTML reports only |
 | `aipm check [TICKET_KEY]` | Check ticket completion against configured repos using Copilot |
 | `aipm check --debug` | Check with full Copilot prompt/response output |
 | `aipm commit` | Stage AIPM files, generate a commit message, and commit |
+
+> **Demo reports**: See a live example of generated reports at [christianjann.github.io/aipm/report/index.html](https://christianjann.github.io/aipm/report/index.html).
 
 ## Time Horizons
 
@@ -244,7 +246,7 @@ my-project/
 │       └── 87_refactor_api.md
 ├── milestones.md      # Project milestones grouped by horizon
 ├── goals.md           # Project goals
-├── generated/         # Generated reports (summaries, plan)
+├── generated/         # Generated reports (summaries, plan) — configurable via `output_dir` in `aipm.toml`
 │   ├── summary_day.md / .html
 │   ├── summary_week.md / .html
 │   ├── summary_week_alice.md / .html
