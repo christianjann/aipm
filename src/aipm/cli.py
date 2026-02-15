@@ -147,12 +147,18 @@ def commit(obj: dict | None = None) -> None:
 
 
 @main.command()
+@click.option(
+    "--structure",
+    is_flag=True,
+    default=False,
+    help="Upgrade ticket directory structure (move to numbered folders with ISSUE.md)",
+)
 @click.pass_obj
-def upgrade(obj: dict | None = None) -> None:
-    """Upgrade existing tickets by filling in missing fields."""
+def upgrade(obj: dict | None = None, structure: bool = False) -> None:
+    """Upgrade existing tickets by filling in missing fields or upgrading directory structure."""
     from aipm.commands.upgrade import cmd_upgrade
 
-    cmd_upgrade(offline=obj.get("offline", False) if obj else False)
+    cmd_upgrade(offline=obj.get("offline", False) if obj else False, structure=structure)
 
 
 @main.group()

@@ -14,8 +14,8 @@ from aipm.utils import format_markdown_ticket
 console = Console()
 
 
-def cmd_upgrade(offline: bool = False) -> None:
-    """Upgrade existing tickets by filling in missing fields interactively."""
+def cmd_upgrade(offline: bool = False, structure: bool = False) -> None:
+    """Upgrade existing tickets by filling in missing fields or converting structure."""
     project_root = get_project_root()
     if project_root is None:
         console.print("[red]No AIPM project found. Run 'aipm init' first.[/red]")
@@ -38,13 +38,31 @@ def cmd_upgrade(offline: bool = False) -> None:
         is_frontmatter = content.startswith("---")
 
         missing_fields = _get_missing_fields(ticket_data)
-        if not missing_fields and is_frontmatter:
+
+        # Determine if we should upgrade this ticket
+        should_upgrade = True if structure else bool(missing_fields) or not is_frontmatter
+
+        if not should_upgrade:
             continue
 
         console.print(f"\n[bold]Ticket: {ticket_data.get('title', ticket_file.stem)}[/bold]")
         console.print(f"File: {ticket_file.name}")
 
-        if not click.confirm("Upgrade this ticket?", default=True):
+        if structure:
+            console.print("[dim]Upgrading to new directory structure...[/dim]")
+            # For structure upgrade, don't prompt - just do it
+            do_upgrade = True
+        else:
+            do_upgrade = click.confirm("Upgrade this ticket?", default=True)
+
+        if not do_upgrade:
+            continue
+
+        if structure:
+            # For structure upgrade, just move to directory structure without changing content
+            _upgrade_directory_structure(ticket_file, ticket_data)
+            tickets_upgraded += 1
+            console.print(f"[green]Upgraded {ticket_file.name}[/green]")
             continue
 
         # Prompt for missing fields
@@ -76,6 +94,11 @@ def cmd_upgrade(offline: bool = False) -> None:
 
         # Rewrite the ticket file
         _update_ticket_file(ticket_file, ticket_data)
+
+        # If --structure is used, also upgrade the directory structure
+        if structure:
+            _upgrade_directory_structure(ticket_file, ticket_data)
+
         tickets_upgraded += 1
         console.print(f"[green]Upgraded {ticket_file.name}[/green]")
 
@@ -179,6 +202,35 @@ def _get_missing_fields(ticket_data: dict[str, str]) -> list[str]:
             missing.append(field)
 
     return missing
+
+
+def _upgrade_directory_structure(ticket_file: Path, ticket_data: dict[str, str]) -> None:
+    """Upgrade ticket from file to directory structure."""
+    from aipm.utils import sanitize_name
+
+    # Extract number from key (e.g., "L-0001" -> "0001")
+    key = ticket_data.get("key", "")
+    number_part = key.split("-")[-1] if "-" in key else key
+
+    # Zero-pad to 6 digits
+    padded_number = f"{int(number_part):06d}"
+
+    # Sanitize title
+    title = ticket_data.get("title", "")
+    sanitized_title = sanitize_name(title, max_length=60)
+
+    # Create directory name
+    dir_name = f"{padded_number}_{sanitized_title}"
+    ticket_dir = ticket_file.parent / dir_name
+
+    # Create directory
+    ticket_dir.mkdir(exist_ok=True)
+
+    # Move file to ISSUE.md
+    new_file = ticket_dir / "ISSUE.md"
+    ticket_file.rename(new_file)
+
+    console.print(f"[dim]Moved to directory: {dir_name}/ISSUE.md[/dim]")
 
 
 def _update_ticket_file(ticket_file: Path, ticket_data: dict[str, str]) -> None:
