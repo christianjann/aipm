@@ -8,5 +8,5 @@ _Filter: all users · Period: day_
 
 ## Completed (2)
 
-- ~~L-0001: Create local set tickets for testing~~
-- ~~L-0004: Add due date feature~~
+- ~~L-000001: Create local set tickets for testing~~
+- ~~L-000004: Add due date feature~~

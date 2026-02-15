@@ -8,5 +8,5 @@ _Filter: claude · Period: month_
 
 ## Completed (2)
 
-- ~~L-0003: Add generation support for the plans and dashboards~~
-- ~~L-0004: Add due date feature~~
+- ~~L-000004: Add due date feature~~
+- ~~L-000003: Add generation support for the plans and dashboards~~

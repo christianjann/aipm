@@ -2,11 +2,12 @@
 
 _Filter: chris · Period: month_
 
-## Overview (2 tickets)
+## Overview (3 tickets)
 
-- **Completed:** 2
+- **Completed:** 3
 
-## Completed (2)
+## Completed (3)
 
-- ~~L-0001: Create local set tickets for testing~~
-- ~~L-0002: Test and extend copilot integration~~
+- ~~L-000001: Create local set tickets for testing~~
+- ~~L-000007: Evaluate using markdown frontmatter format for ticket sync and storage~~
+- ~~L-000002: Test and extend copilot integration~~
