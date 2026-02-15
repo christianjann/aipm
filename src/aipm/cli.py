@@ -105,14 +105,19 @@ def summary(period: str, user: str, debug: bool) -> None:
     default="all",
     help="Output format: md, html, or all (default: all)",
 )
-def report(fmt: str) -> None:
+@click.option(
+    "--date",
+    is_flag=True,
+    help="Include generation timestamp in reports",
+)
+def report(fmt: str, date: bool) -> None:
     """Generate a full set of reports under the configured output directory.
 
     Creates summaries for every period and user, plus a project plan.
     """
     from aipm.commands.report import cmd_report
 
-    cmd_report(fmt=fmt)
+    cmd_report(fmt=fmt, include_date=date)
 
 
 @main.command()

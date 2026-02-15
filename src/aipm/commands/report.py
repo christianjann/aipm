@@ -70,6 +70,7 @@ def _generate_summary_md(
     period: str,
     user: str,
     config: ProjectConfig,
+    include_date: bool = False,
 ) -> str:
     """Generate a Markdown summary for *period* / *user*."""
     now = datetime.now()
@@ -86,12 +87,13 @@ def _generate_summary_md(
     lines = [
         f"# {config.name} — {period.title()} Summary",
         "",
-        f"_Generated: {now.strftime('%Y-%m-%d %H:%M')}_  ",
-        f"_Filter: {user_label} · Period: {period}_",
-        "",
-        f"## Overview ({len(filtered)} tickets)",
-        "",
     ]
+    if include_date:
+        lines.append(f"_Generated: {now.strftime('%Y-%m-%d %H:%M')}_  ")
+    lines.append(f"_Filter: {user_label} · Period: {period}_")
+    lines.append("")
+    lines.append(f"## Overview ({len(filtered)} tickets)")
+    lines.append("")
     if active:
         lines.append(f"- **Active:** {len(active)}")
     if remaining:
@@ -156,17 +158,22 @@ def _ticket_line(t: dict[str, str], *, bold: bool = False) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _generate_plan_md(tickets: list[dict[str, str]], config: ProjectConfig) -> str:
+def _generate_plan_md(tickets: list[dict[str, str]], config: ProjectConfig, include_date: bool = False) -> str:
     """Generate a project plan in Markdown grouped by horizon."""
     now = datetime.now()
     lines = [
         f"# {config.name} — Project Plan",
         "",
-        f"_Generated: {now.strftime('%Y-%m-%d %H:%M')}_",
-        "",
-        "| Ticket | Assignee | Status | Horizon | Due |",
-        "|--------|----------|--------|---------|-----|",
     ]
+    if include_date:
+        lines.append(f"_Generated: {now.strftime('%Y-%m-%d %H:%M')}_")
+    lines.extend(
+        [
+            "",
+            "| Ticket | Assignee | Status | Horizon | Due |",
+            "|--------|----------|--------|---------|-----|",
+        ]
+    )
 
     open_tickets = [t for t in tickets if t.get("status", "").lower() not in _DONE_STATUSES]
     open_tickets.sort(key=lambda t: horizon_sort_key(t.get("horizon", "sometime")))
@@ -193,7 +200,7 @@ def _generate_plan_md(tickets: list[dict[str, str]], config: ProjectConfig) -> s
     return "\n".join(lines)
 
 
-def _generate_plan_html(tickets: list[dict[str, str]], config: ProjectConfig) -> str:
+def _generate_plan_html(tickets: list[dict[str, str]], config: ProjectConfig, include_date: bool = False) -> str:
     """Generate a project plan in HTML with coloured horizon bars."""
     now = datetime.now()
     _esc = html.escape
@@ -246,14 +253,22 @@ def _generate_plan_html(tickets: list[dict[str, str]], config: ProjectConfig) ->
         nav_links.append(f'<a href="{_esc(config.url)}">&larr; Back to {config.name}</a>')
     nav = " | ".join(nav_links)
 
+    open_count = len(open_tickets)
+    done_count = len(done)
+    generated_str = now.strftime("%Y-%m-%d %H:%M") if include_date else ""
+    meta_parts = []
+    if generated_str:
+        meta_parts.append(f"Generated: {generated_str}")
+    meta_parts.append(f"{open_count} open")
+    meta_parts.append(f"{done_count} completed")
+    meta = " · ".join(meta_parts)
+
     return _HTML_TEMPLATE.format(
         title=_esc(config.name),
         nav=nav,
-        generated=now.strftime("%Y-%m-%d %H:%M"),
+        meta=meta,
         rows="\n".join(rows),
         done_section=done_rows,
-        open_count=len(open_tickets),
-        done_count=len(done),
     )
 
 
@@ -292,7 +307,7 @@ _HTML_TEMPLATE = """\
 <body>
 <p class="nav">{nav}</p>
 <h1>{title} — Project Plan</h1>
-<p class="meta">Generated: {generated} · {open_count} open · {done_count} completed</p>
+<p class="meta">{meta}</p>
 <table>
 <thead><tr><th>Ticket</th><th>Assignee</th><th>Status</th><th>Due</th><th>Horizon</th></tr></thead>
 <tbody>
@@ -332,7 +347,7 @@ def _md_to_html(md_text: str, title: str, config: ProjectConfig) -> str:
         elif stripped.startswith("### "):
             body_lines.append(f"<h3>{_esc(stripped[4:])}</h3>")
         elif stripped.startswith("_") and stripped.endswith("_"):
-            body_lines.append(f"<p class=\"meta\">{_esc(stripped.strip('_'))}</p>")
+            body_lines.append(f'<p class="meta">{_esc(stripped.strip("_"))}</p>')
         elif stripped.startswith("- "):
             if not in_list:
                 body_lines.append("<ul>")
@@ -414,6 +429,7 @@ PER_USER_PERIODS = ("week", "month")
 def _generate_index_html(
     config: ProjectConfig,
     html_files: list[tuple[str, str]],
+    include_date: bool = False,
 ) -> str:
     """Generate an index.html that links to all generated HTML reports.
 
@@ -449,16 +465,21 @@ def _generate_index_html(
     body_parts = []
     if config.url:
         body_parts.append(f'<p><a href="{_esc(config.url)}">← Back to {config.name}</a></p>')
-    body_parts.extend([
-        _section("Summaries (all users)", summary_links),
-        _section("Per-user summaries", user_links),
-        _section("Project plan", plan_links),
-    ])
+    body_parts.extend(
+        [
+            _section("Summaries (all users)", summary_links),
+            _section("Per-user summaries", user_links),
+            _section("Project plan", plan_links),
+        ]
+    )
     body = "\n".join(p for p in body_parts if p)
+
+    generated_str = now.strftime("%Y-%m-%d %H:%M") if include_date else ""
+    meta_line = f'<p class="meta">Generated: {generated_str}</p>' if generated_str else ""
 
     return _INDEX_HTML_TEMPLATE.format(
         title=_esc(config.name),
-        generated=now.strftime("%Y-%m-%d %H:%M"),
+        meta=meta_line,
         body=body,
     )
 
@@ -490,14 +511,14 @@ _INDEX_HTML_TEMPLATE = """\
 </head>
 <body>
 <h1>{title} — Reports</h1>
-<p class="meta">Generated: {generated}</p>
+{meta}
 {body}
 </body>
 </html>
 """
 
 
-def cmd_report(fmt: str = "all") -> None:
+def cmd_report(fmt: str = "all", include_date: bool = False) -> None:
     """Generate a full set of project reports under the configured output directory.
 
     Creates:
@@ -530,7 +551,7 @@ def cmd_report(fmt: str = "all") -> None:
         # 1. Summaries for all users by period
         for period in SUMMARY_PERIODS:
             status.update(f"  summary — {period} (all)...")
-            md_text = _generate_summary_md(tickets, period, "all", config)
+            md_text = _generate_summary_md(tickets, period, "all", config, include_date)
             name = f"summary_{period}"
 
             if write_md:
@@ -547,7 +568,7 @@ def cmd_report(fmt: str = "all") -> None:
         for user in assignees:
             for period in PER_USER_PERIODS:
                 status.update(f"  summary — {period} ({user})...")
-                md_text = _generate_summary_md(tickets, period, user, config)
+                md_text = _generate_summary_md(tickets, period, user, config, include_date)
                 safe = user.lower().replace(" ", "_")
                 name = f"summary_{period}_{safe}"
 
@@ -565,11 +586,11 @@ def cmd_report(fmt: str = "all") -> None:
         status.update("  project plan...")
         if write_md:
             path = gen_dir / "plan.md"
-            path.write_text(_generate_plan_md(tickets, config))
+            path.write_text(_generate_plan_md(tickets, config, include_date))
             files_written.append(str(path.relative_to(project_root)))
         if write_html:
             path = gen_dir / "plan.html"
-            path.write_text(_generate_plan_html(tickets, config))
+            path.write_text(_generate_plan_html(tickets, config, include_date))
             files_written.append(str(path.relative_to(project_root)))
             html_index_entries.append(("plan.html", "Project Plan"))
 
@@ -577,7 +598,7 @@ def cmd_report(fmt: str = "all") -> None:
         if write_html:
             status.update("  index...")
             path = gen_dir / "index.html"
-            path.write_text(_generate_index_html(config, html_index_entries))
+            path.write_text(_generate_index_html(config, html_index_entries, include_date))
             files_written.append(str(path.relative_to(project_root)))
 
     console.print(f"\n[green]Generated {len(files_written)} report(s) in {config.output_dir}/:[/green]")

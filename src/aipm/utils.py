@@ -222,11 +222,7 @@ def copilot_chat(prompt: str, *, timeout: float = 15.0, retries: int = 3, model:
                     response = await session.send_and_wait({"prompt": prompt}, timeout=timeout)
                     await session.destroy()
                     if response and hasattr(response, "data"):
-                        text = (
-                            getattr(response.data, "content", None)
-                            or getattr(response.data, "message", None)
-                            or ""
-                        )
+                        text = getattr(response.data, "content", None) or getattr(response.data, "message", None) or ""
                         if text:
                             return text
                     # Empty response — retry
