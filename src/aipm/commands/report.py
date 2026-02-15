@@ -152,12 +152,12 @@ def _ticket_line(t: dict[str, str], *, bold: bool = False) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Gantt-style plan (Markdown + HTML)
+# Project plan (Markdown + HTML)
 # ---------------------------------------------------------------------------
 
 
-def _generate_gantt_md(tickets: list[dict[str, str]], config: ProjectConfig) -> str:
-    """Generate a Gantt-chart-like Markdown plan grouped by horizon."""
+def _generate_plan_md(tickets: list[dict[str, str]], config: ProjectConfig) -> str:
+    """Generate a project plan in Markdown grouped by horizon."""
     now = datetime.now()
     lines = [
         f"# {config.name} — Project Plan",
@@ -193,8 +193,8 @@ def _generate_gantt_md(tickets: list[dict[str, str]], config: ProjectConfig) -> 
     return "\n".join(lines)
 
 
-def _generate_gantt_html(tickets: list[dict[str, str]], config: ProjectConfig) -> str:
-    """Generate a Gantt-chart-like HTML plan with coloured horizon bars."""
+def _generate_plan_html(tickets: list[dict[str, str]], config: ProjectConfig) -> str:
+    """Generate a project plan in HTML with coloured horizon bars."""
     now = datetime.now()
     _esc = html.escape
 
@@ -341,7 +341,7 @@ def _md_to_html(md_text: str, title: str) -> str:
                 content = _esc(content)
             body_lines.append(f"<li>{content}</li>")
         elif stripped.startswith("|") and stripped.endswith("|"):
-            # Skip raw markdown tables (gantt has its own HTML)
+            # Skip raw markdown tables (plan has its own HTML)
             body_lines.append(f"<p>{_esc(stripped)}</p>")
         else:
             body_lines.append(f"<p>{_esc(stripped)}</p>")
@@ -490,7 +490,7 @@ def cmd_report(fmt: str = "all") -> None:
     Creates:
     - summary_{period}.{ext} for day/week/month/year (all users)
     - summary_{period}_{user}.{ext} for week/month per user
-    - plan.{ext} — Gantt-chart-style project plan
+    - plan.{ext} — project plan
     """
     project_root = get_project_root()
     if project_root is None:
@@ -548,17 +548,17 @@ def cmd_report(fmt: str = "all") -> None:
                     files_written.append(str(path.relative_to(project_root)))
                     html_index_entries.append((f"{name}.html", f"{period.title()} Summary ({user})"))
 
-        # 3. Gantt-style plan
+        # 3. Project plan
         status.update("  project plan...")
         if write_md:
             path = gen_dir / "plan.md"
-            path.write_text(_generate_gantt_md(tickets, config))
+            path.write_text(_generate_plan_md(tickets, config))
             files_written.append(str(path.relative_to(project_root)))
         if write_html:
             path = gen_dir / "plan.html"
-            path.write_text(_generate_gantt_html(tickets, config))
+            path.write_text(_generate_plan_html(tickets, config))
             files_written.append(str(path.relative_to(project_root)))
-            html_index_entries.append(("plan.html", "Project Plan (Gantt)"))
+            html_index_entries.append(("plan.html", "Project Plan"))
 
         # 4. Index page
         if write_html:
