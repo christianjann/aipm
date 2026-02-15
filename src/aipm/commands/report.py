@@ -158,7 +158,10 @@ def _generate_summary_md(
         lines.append(f"## Completed ({len(completed)})")
         lines.append("")
         for t in completed[:15]:
-            lines.append(f"- ~~{t.get('title', '?')}~~")
+            key = t.get("key", "")
+            title = t.get("title", "?")
+            display_title = f"{key}: {title}" if key else title
+            lines.append(f"- ~~{display_title}~~")
         if len(completed) > 15:
             lines.append(f"- _...and {len(completed) - 15} more_")
         lines.append("")
@@ -167,7 +170,9 @@ def _generate_summary_md(
 
 
 def _ticket_line(t: dict[str, str], *, bold: bool = False) -> str:
+    key = t.get("key", "")
     title = t.get("title", "?")
+    display_title = f"{key}: {title}" if key else title
     assignee = t.get("assignee", "")
     status = t.get("status", "open")
     due = t.get("due", "")
@@ -179,7 +184,7 @@ def _ticket_line(t: dict[str, str], *, bold: bool = False) -> str:
     suffix = f" ({', '.join(parts)})" if parts else ""
     prefix = "**⚡ " if bold else ""
     end = f"** [{status}]" if bold else f" [{status}]"
-    return f"- {prefix}{title}{end}{suffix}"
+    return f"- {prefix}{display_title}{end}{suffix}"
 
 
 # ---------------------------------------------------------------------------
@@ -208,12 +213,14 @@ def _generate_plan_md(tickets: list[dict[str, str]], config: ProjectConfig, incl
     open_tickets.sort(key=lambda t: horizon_sort_key(t.get("horizon", "sometime")))
 
     for t in open_tickets:
+        key = t.get("key", "")
         title = t.get("title", "?")
+        display_title = f"{key}: {title}" if key else title
         assignee = t.get("assignee", "")
         status = t.get("status", "open")
         horizon = t.get("horizon", "sometime")
         due = t.get("due", "")
-        lines.append(f"| {title} | {assignee} | {status} | {horizon} | {due} |")
+        lines.append(f"| {display_title} | {assignee} | {status} | {horizon} | {due} |")
 
     lines.append("")
 
@@ -223,7 +230,10 @@ def _generate_plan_md(tickets: list[dict[str, str]], config: ProjectConfig, incl
         lines.append(f"### Completed ({len(done)})")
         lines.append("")
         for t in done:
-            lines.append(f"- ~~{t.get('title', '?')}~~")
+            key = t.get("key", "")
+            title = t.get("title", "?")
+            display_title = f"{key}: {title}" if key else title
+            lines.append(f"- ~~{display_title}~~")
         lines.append("")
 
     return "\n".join(lines)
@@ -252,7 +262,9 @@ def _generate_plan_html(tickets: list[dict[str, str]], config: ProjectConfig, in
 
     rows: list[str] = []
     for t in open_tickets:
+        key = _esc(t.get("key", ""))
         title = _esc(t.get("title", "?"))
+        display_title = f"{key}: {title}" if key else title
         assignee = _esc(t.get("assignee", ""))
         status = _esc(t.get("status", "open"))
         horizon = t.get("horizon", "sometime").lower()
@@ -264,7 +276,7 @@ def _generate_plan_html(tickets: list[dict[str, str]], config: ProjectConfig, in
         bar_pct = max(15, max_bar - idx * 15)
         rows.append(
             f"<tr>"
-            f'<td class="title">{title}</td>'
+            f'<td class="title">{display_title}</td>'
             f"<td>{assignee}</td>"
             f"<td>{status}</td>"
             f"<td>{due}</td>"
@@ -274,8 +286,13 @@ def _generate_plan_html(tickets: list[dict[str, str]], config: ProjectConfig, in
 
     done_rows = ""
     if done:
-        done_items = "\n".join(f"<li><s>{_esc(t.get('title', '?'))}</s></li>" for t in done)
-        done_rows = f'<h3>Completed ({len(done)})</h3><ul class="done">{done_items}</ul>'
+        done_items = []
+        for t in done:
+            key = _esc(t.get("key", ""))
+            title = _esc(t.get("title", "?"))
+            display_title = f"{key}: {title}" if key else title
+            done_items.append(f"<li><s>{display_title}</s></li>")
+        done_rows = f'<h3>Completed ({len(done)})</h3><ul class="done">{"\n".join(done_items)}</ul>'
 
     nav_links = ['<a href="index.html">&larr; Back to index</a>']
     if config.url:

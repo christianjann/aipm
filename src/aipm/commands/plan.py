@@ -103,10 +103,12 @@ def _update_plan_with_copilot(
             items = by_horizon[h]
             ticket_summary.append(f"\n### {label} ({len(items)})")
             for t in items[:20]:
+                key = t.get("key", "")
                 title = t.get("title", "Unknown")
+                display_title = f"{key}: {title}" if key else title
                 status = t.get("status", "unknown")
                 assignee = t.get("assignee", "Unassigned")
-                ticket_summary.append(f"- [{status}] {title} (Assignee: {assignee})")
+                ticket_summary.append(f"- [{status}] {display_title} (Assignee: {assignee})")
 
         ticket_text = "\n".join(ticket_summary)
 
@@ -170,7 +172,9 @@ def _update_plan_fallback(
             lines.append(f"## {label} ({len(group)})")
             lines.append("")
             for t in group:
+                key = t.get("key", "")
                 title = t.get("title", "Unknown")
+                display_title = f"{key}: {title}" if key else title
                 assignee = t.get("assignee", "")
                 status = t.get("status", "open")
                 due = t.get("due", "")
@@ -182,7 +186,7 @@ def _update_plan_fallback(
                 if due:
                     suffix_parts.append(f"due {due}")
                 suffix = f" ({', '.join(suffix_parts)})" if suffix_parts else ""
-                lines.append(f"- [ ] {title}{suffix}")
+                lines.append(f"- [ ] {display_title}{suffix}")
             lines.append("")
 
     # Completed section
@@ -190,8 +194,10 @@ def _update_plan_fallback(
         lines.append(f"## Completed ({len(completed)})")
         lines.append("")
         for t in completed:
+            key = t.get("key", "")
             title = t.get("title", "Unknown")
-            lines.append(f"- [x] {title}")
+            display_title = f"{key}: {title}" if key else title
+            lines.append(f"- [x] {display_title}")
         lines.append("")
 
     return "\n".join(lines)

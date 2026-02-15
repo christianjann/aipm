@@ -107,11 +107,13 @@ def _generate_summary_with_copilot(
         # Build ticket info
         ticket_lines = []
         for t in tickets[:50]:
+            key = t.get("key", "")
             title = t.get("title", "Unknown")
+            display_title = f"{key}: {title}" if key else title
             status = t.get("status", "unknown")
             assignee = t.get("assignee", "Unassigned")
             horizon = t.get("horizon", "sometime")
-            ticket_lines.append(f"- [{status}] {title} (Assignee: {assignee}, Horizon: {horizon})")
+            ticket_lines.append(f"- [{status}] {display_title} (Assignee: {assignee}, Horizon: {horizon})")
 
         ticket_text = "\n".join(ticket_lines)
 
@@ -224,7 +226,9 @@ def _generate_summary_fallback(
             normal = [t for t in group if t not in high]
 
             for t in high:
+                key = t.get("key", "")
                 title = t.get("title", "Unknown")
+                display_title = f"{key}: {title}" if key else title
                 assignee = t.get("assignee", "")
                 status = t.get("status", "open")
                 due = t.get("due", "")
@@ -234,10 +238,12 @@ def _generate_summary_fallback(
                 if due:
                     suffix_parts.append(f"due {due}")
                 suffix = f" ({', '.join(suffix_parts)})" if suffix_parts else ""
-                lines.append(f"- **⚡ {title}** [{status}]{suffix}")
+                lines.append(f"- **⚡ {display_title}** [{status}]{suffix}")
 
             for t in normal:
+                key = t.get("key", "")
                 title = t.get("title", "Unknown")
+                display_title = f"{key}: {title}" if key else title
                 assignee = t.get("assignee", "")
                 status = t.get("status", "open")
                 due = t.get("due", "")
@@ -247,7 +253,7 @@ def _generate_summary_fallback(
                 if due:
                     suffix_parts.append(f"due {due}")
                 suffix = f" ({', '.join(suffix_parts)})" if suffix_parts else ""
-                lines.append(f"- {title} [{status}]{suffix}")
+                lines.append(f"- {display_title} [{status}]{suffix}")
 
             lines.append("")
 
@@ -256,8 +262,10 @@ def _generate_summary_fallback(
         lines.append(f"## Completed ({len(completed)})")
         lines.append("")
         for t in completed[:10]:
+            key = t.get("key", "")
             title = t.get("title", "Unknown")
-            lines.append(f"- ~~{title}~~")
+            display_title = f"{key}: {title}" if key else title
+            lines.append(f"- ~~{display_title}~~")
         if len(completed) > 10:
             lines.append(f"- _...and {len(completed) - 10} more_")
         lines.append("")
