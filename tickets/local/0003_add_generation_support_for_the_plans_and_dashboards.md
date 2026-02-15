@@ -1,13 +1,13 @@
-# L-0003: Add generation support for the plans and dashboards
-
-| Field | Value |
-|-------|-------|
-| **Status** | completed |
-| **Horizon** | week |
-| **Assignee** | claude |
-| **Priority** | high |
-| **Source** | local |
-| **Repo** | . |
+---
+assignee: claude
+horizon: week
+key: L-0003
+priority: high
+repo: .
+source: local
+status: completed
+title: Add generation support for the plans and dashboards
+---
 
 ## Description
 

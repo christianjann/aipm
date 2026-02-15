@@ -1,12 +1,12 @@
-# L-0005: Add debug mode for check
-
-| Field | Value |
-|-------|-------|
-| **Status** | completed |
-| **Horizon** | year |
-| **Priority** | medium |
-| **Source** | local |
-| **Repo** | . |
+---
+horizon: year
+key: L-0005
+priority: medium
+repo: .
+source: local
+status: completed
+title: Add debug mode for check
+---
 
 ## Description
 

@@ -1,14 +1,14 @@
-# L-0004: Add due date feature
-
-| Field | Value |
-|-------|-------|
-| **Status** | completed |
-| **Horizon** | now |
-| **Due** | 2025-02-13 |
-| **Assignee** | claude |
-| **Priority** | high |
-| **Source** | local |
-| **Repo** | . |
+---
+assignee: claude
+due: '2025-02-13'
+horizon: now
+key: L-0004
+priority: high
+repo: .
+source: local
+status: completed
+title: Add due date feature
+---
 
 ## Description
 

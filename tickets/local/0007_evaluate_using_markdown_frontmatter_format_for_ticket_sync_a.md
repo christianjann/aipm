@@ -1,13 +1,13 @@
-# L-0007: Evaluate using markdown frontmatter format for ticket sync and storage
-
-| Field | Value |
-|-------|-------|
-| **Status** | open |
-| **Horizon** | week |
-| **Priority** | medium |
-| **Source** | local |
-| **Assignee** | chris |
-| **Repo** | . |
+---
+assignee: chris
+horizon: week
+key: L-0007
+priority: medium
+repo: .
+source: local
+status: open
+title: Evaluate using markdown frontmatter format for ticket sync and storage
+---
 
 ## Description
 

@@ -1,10 +1,10 @@
-# L-0002: Test and extend copilot integration
-
-| Field | Value |
-|-------|-------|
-| **Status** | completed |
-| **Horizon** | next-week |
-| **Assignee** | chris |
-| **Priority** | medium |
-| **Source** | local |
-| **Repo** | . |
+---
+assignee: chris
+horizon: next-week
+key: L-0002
+priority: medium
+repo: .
+source: local
+status: completed
+title: Test and extend copilot integration
+---

@@ -1,12 +1,12 @@
-# L-0006: Test GitHub and Jira Integration
-
-| Field | Value |
-|-------|-------|
-| **Status** | open |
-| **Horizon** | month |
-| **Priority** | medium |
-| **Source** | local |
-| **Repo** | . |
+---
+horizon: month
+key: L-0006
+priority: medium
+repo: .
+source: local
+status: open
+title: Test GitHub and Jira Integration
+---
 
 ## Description
 
