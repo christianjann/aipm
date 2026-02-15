@@ -5,7 +5,7 @@ key: L-0007
 priority: medium
 repo: .
 source: local
-status: open
+status: completed
 title: Evaluate using markdown frontmatter format for ticket sync and storage
 ---
 
