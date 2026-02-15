@@ -16,6 +16,7 @@ dependencies = [
     "toml>=0.10",
     "rich>=13.0",
     "gitpython>=3.1",
+    "python-frontmatter>=1.1.0",
 ]
 
 [project.scripts]

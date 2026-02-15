@@ -66,6 +66,7 @@ def format_markdown_ticket(
     priority: str = "",
     labels: list[str] | None = None,
     description: str = "",
+    summary: str = "",
     url: str = "",
     repo: str = "",
     source_type: str = "",
@@ -73,42 +74,45 @@ def format_markdown_ticket(
     due: str = "",
     extra_fields: dict[str, str] | None = None,
 ) -> str:
-    """Format a ticket as a markdown file content."""
-    lines = [
-        f"# {key}: {title}",
-        "",
-        "| Field | Value |",
-        "|-------|-------|",
-        f"| **Status** | {status} |",
-    ]
+    """Format a ticket as a markdown file content with YAML front matter."""
+    import frontmatter
 
-    if horizon:
-        lines.append(f"| **Horizon** | {horizon} |")
-    if due:
-        lines.append(f"| **Due** | {due} |")
-    if assignee:
-        lines.append(f"| **Assignee** | {assignee} |")
-    if priority:
-        lines.append(f"| **Priority** | {priority} |")
-    if labels:
-        lines.append(f"| **Labels** | {', '.join(labels)} |")
+    # Build front matter dict
+    front_matter = {
+        "key": key,
+        "title": title,
+        "status": status,
+    }
+
     if source_type:
-        lines.append(f"| **Source** | {source_type} |")
-    if url:
-        lines.append(f"| **URL** | [{url}]({url}) |")
+        front_matter["source"] = source_type
+    if priority:
+        front_matter["priority"] = priority
+    if horizon:
+        front_matter["horizon"] = horizon
+    if assignee:
+        front_matter["assignee"] = assignee
+    if due:
+        front_matter["due"] = due
     if repo:
-        lines.append(f"| **Repo** | {repo} |")
-
+        front_matter["repo"] = repo
+    if url:
+        front_matter["url"] = url
+    if summary:
+        front_matter["summary"] = summary
+    if labels:
+        front_matter["labels"] = labels
     if extra_fields:
-        for field_name, field_value in extra_fields.items():
-            lines.append(f"| **{field_name}** | {field_value} |")
+        front_matter.update(extra_fields)
 
-    lines.append("")
-
+    # Prepare content
+    content = ""
     if description:
-        lines.extend(["## Description", "", description, ""])
+        content = f"## Description\n\n{description}\n"
 
-    return "\n".join(lines)
+    # Use frontmatter to generate the full content
+    post = frontmatter.Post(content, **front_matter)
+    return frontmatter.dumps(post)
 
 
 # Default model — cheapest Claude available on Copilot

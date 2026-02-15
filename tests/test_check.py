@@ -338,11 +338,11 @@ def test_ticket_add_with_repo(work_dir: Path) -> None:
     assert result.exit_code == 0, result.output
 
     local_dir = work_dir / "tickets" / "local"
-    md_files = list(local_dir.glob("*.md"))
-    assert len(md_files) == 1
-    content = md_files[0].read_text()
+    ticket_dirs = [d for d in local_dir.iterdir() if d.is_dir() and (d / "ISSUE.md").exists()]
+    assert len(ticket_dirs) == 1
+    content = (ticket_dirs[0] / "ISSUE.md").read_text()
     assert "/tmp/myproject" in content
-    assert "**Repo**" in content
+    assert "repo:" in content
 
 
 # --- Status detection and ticket update tests ---
@@ -372,10 +372,10 @@ def test_update_ticket_status(work_dir: Path) -> None:
     _update_ticket_status(filepath, "completed")
 
     content = filepath.read_text()
-    assert "| **Status** | completed |" in content
+    assert "status: completed" in content
     # Other fields should be preserved
-    assert "**Horizon**" in content
-    assert "**Priority**" in content
+    assert "horizon:" in content
+    assert "priority:" in content
 
 
 def test_check_prompts_to_close_done_ticket(work_dir: Path) -> None:
@@ -401,7 +401,7 @@ def test_check_prompts_to_close_done_ticket(work_dir: Path) -> None:
 
     # Verify the ticket file was updated
     content = ticket_path.read_text()
-    assert "| **Status** | completed |" in content
+    assert "status: completed" in content
 
 
 def test_check_decline_close_keeps_status(work_dir: Path) -> None:
@@ -426,7 +426,7 @@ def test_check_decline_close_keeps_status(work_dir: Path) -> None:
 
     # Verify the ticket file still has open status
     content = ticket_path.read_text()
-    assert "| **Status** | open |" in content
+    assert "status: open" in content
 
 
 def test_check_commit_option_closes_and_commits(work_dir: Path) -> None:
@@ -452,7 +452,7 @@ def test_check_commit_option_closes_and_commits(work_dir: Path) -> None:
 
     # Verify the ticket file was updated
     content = ticket_path.read_text()
-    assert "| **Status** | completed |" in content
+    assert "status: completed" in content
 
     # Verify a git commit was created with the expected message
     log = subprocess.run(["git", "log", "--oneline", "-1"], cwd=work_dir, capture_output=True, text=True)

@@ -46,7 +46,7 @@ Without Copilot the output is still useful — you see the matched commits and c
 aipm check
 
 # Check a single ticket
-aipm check L-0001
+aipm check L-000001
 
 # Limit to the 3 most urgent
 aipm check -n 3

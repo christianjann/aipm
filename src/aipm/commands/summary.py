@@ -33,7 +33,35 @@ def _collect_all_tickets(project_root: Path) -> list[dict[str, str]]:
 def _parse_ticket(content: str, filepath: Path) -> dict[str, str]:
     """Parse ticket markdown to extract fields."""
     info: dict[str, str] = {"file": str(filepath)}
+
     lines = content.split("\n")
+
+    # Check if it starts with front matter
+    if lines and lines[0] == "---":
+        # Parse YAML front matter
+        front_matter_lines = []
+        i = 1
+        while i < len(lines) and lines[i] != "---":
+            front_matter_lines.append(lines[i])
+            i += 1
+
+        if front_matter_lines:
+            import yaml
+
+            try:
+                front_matter = yaml.safe_load("\n".join(front_matter_lines))
+                if isinstance(front_matter, dict):
+                    # Convert all values to strings, handle lists
+                    for k, v in front_matter.items():
+                        if isinstance(v, list):
+                            info[k] = ", ".join(str(item) for item in v)
+                        else:
+                            info[k] = str(v) if v is not None else ""
+                    return info
+            except yaml.YAMLError:
+                pass  # Fall back to old parsing
+
+    # Fallback to old table parsing
     for line in lines:
         if line.startswith("# "):
             info["title"] = line[2:].strip()

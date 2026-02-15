@@ -15,18 +15,39 @@ from aipm.utils import format_markdown_ticket, git_stage_files, sanitize_name
 console = Console()
 
 
-def _next_ticket_number(local_dir: Path) -> int:
+def _get_ticket_files(local_dir: Path) -> list[Path]:
+    """Get all ticket files, handling both old .md files and new ISSUE.md in folders."""
+    ticket_files = []
+    for item in local_dir.iterdir():
+        if item.is_file() and item.suffix == ".md":
+            # Old format
+            ticket_files.append(item)
+        elif item.is_dir() and (item / "ISSUE.md").exists():
+            # New format
+            ticket_files.append(item / "ISSUE.md")
+    return sorted(ticket_files)
+
+
+def _get_next_ticket_number(local_dir: Path) -> int:
     """Find the next sequential ticket number in the local directory."""
     if not local_dir.exists():
         return 1
 
     max_num = 0
-    for f in local_dir.iterdir():
-        if f.is_file() and f.suffix == ".md":
-            match = re.match(r"^(\d+)_", f.name)
+    for item in local_dir.iterdir():
+        num = 0
+        if item.is_file() and item.suffix == ".md":
+            # Old format: 0001_title.md
+            match = re.match(r"^(\d+)_", item.name)
             if match:
                 num = int(match.group(1))
-                max_num = max(max_num, num)
+        elif item.is_dir() and (item / "ISSUE.md").exists():
+            # New format: 000001_title/ISSUE.md
+            match = re.match(r"^(\d+)_", item.name)
+            if match:
+                num = int(match.group(1))
+        if num > max_num:
+            max_num = num
 
     return max_num + 1
 
@@ -37,6 +58,7 @@ def cmd_ticket_add(
     priority: str = "",
     assignee: str = "",
     description: str = "",
+    summary: str = "",
     labels: str = "",
     horizon: str = "",
     due: str = "",
@@ -106,11 +128,13 @@ def cmd_ticket_add(
         horizon = infer_horizon_from_due(due)
 
     # Generate sequential number
-    num = _next_ticket_number(local_dir)
-    key = f"L-{num:04d}"
+    num = _get_next_ticket_number(local_dir)
+    key = f"L-{num:06d}"
     sanitized = sanitize_name(title)
-    filename = f"{num:04d}_{sanitized}.md"
-    filepath = local_dir / filename
+    dirname = f"{num:06d}_{sanitized}"
+    ticket_dir = local_dir / dirname
+    ticket_dir.mkdir(parents=True, exist_ok=True)
+    issue_file = ticket_dir / "ISSUE.md"
 
     content = format_markdown_ticket(
         key=key,
@@ -120,6 +144,7 @@ def cmd_ticket_add(
         priority=priority,
         labels=label_list or None,
         description=description,
+        summary=summary,
         url="",
         repo=repo,
         source_type="local",
@@ -127,16 +152,31 @@ def cmd_ticket_add(
         due=due,
     )
 
-    filepath.write_text(content)
+    issue_file.write_text(content)
 
     console.print(f"[green]Created ticket:[/green] {key} — {title}")
     console.print(f"  Horizon: [cyan]{horizon}[/cyan]")
     if due:
         console.print(f"  Due:     [cyan]{due}[/cyan]")
-    console.print(f"  File: tickets/local/{filename}")
+    console.print(f"  File: tickets/local/{dirname}/ISSUE.md")
 
     # Stage the file
-    git_stage_files([filepath], cwd=project_root)
+    git_stage_files([issue_file], cwd=project_root)
+
+
+def _extract_title_from_path(file_path: Path) -> str:
+    """Extract title from ticket file path (folder name or filename)."""
+    if file_path.name == "ISSUE.md":
+        # New folder structure: extract from folder name
+        folder_name = file_path.parent.name
+        # Split on first underscore to get title part
+        parts = folder_name.split("_", 1)
+        if len(parts) > 1:
+            return parts[1].replace("_", " ")
+        return folder_name
+    else:
+        # Old flat structure: use filename stem
+        return file_path.stem.replace("_", " ")
 
 
 def cmd_ticket_list(offline: bool = False) -> None:
@@ -147,7 +187,8 @@ def cmd_ticket_list(offline: bool = False) -> None:
         return
 
     local_dir = project_root / "tickets" / "local"
-    if not local_dir.exists() or not any(local_dir.glob("*.md")):
+    ticket_files = _get_ticket_files(local_dir)
+    if not ticket_files:
         console.print("[yellow]No local tickets found.[/yellow]")
         return
 
@@ -162,12 +203,13 @@ def cmd_ticket_list(offline: bool = False) -> None:
     table.add_column("Priority")
     table.add_column("Assignee")
 
-    for f in sorted(local_dir.glob("*.md")):
+    for f in ticket_files:
         content = f.read_text()
         info = _parse_local_ticket(content)
+        title_fallback = _extract_title_from_path(f)
         table.add_row(
             info.get("key", ""),
-            info.get("title", f.stem),
+            info.get("title", title_fallback),
             info.get("status", ""),
             info.get("horizon", ""),
             info.get("due", ""),
@@ -179,28 +221,81 @@ def cmd_ticket_list(offline: bool = False) -> None:
 
 
 def _parse_local_ticket(content: str) -> dict[str, str]:
-    """Parse a local ticket markdown file."""
+    """Parse a local ticket markdown file with front matter or table format."""
+    lines = content.split("\n")
     info: dict[str, str] = {}
-    for line in content.split("\n"):
-        if line.startswith("# "):
-            # "# L-0001: Title" -> extract key and title
-            heading = line[2:].strip()
-            if ": " in heading:
-                info["key"], info["title"] = heading.split(": ", 1)
-            else:
-                info["title"] = heading
-        if "| **" in line and "** |" in line:
-            parts = line.split("|")
-            if len(parts) >= 3:
-                field = parts[1].strip().strip("*").strip()
-                value = parts[2].strip()
-                info[field.lower()] = value
+
+    # Check if it starts with front matter
+    if lines and lines[0] == "---":
+        # Parse YAML front matter
+        front_matter_lines = []
+        i = 1
+        while i < len(lines) and lines[i] != "---":
+            front_matter_lines.append(lines[i])
+            i += 1
+
+        if front_matter_lines:
+            import yaml
+
+            try:
+                front_matter = yaml.safe_load("\n".join(front_matter_lines))
+                if isinstance(front_matter, dict):
+                    # Convert all values to strings, handle lists
+                    for k, v in front_matter.items():
+                        if isinstance(v, list):
+                            info[k] = ", ".join(str(item) for item in v)
+                        else:
+                            info[k] = str(v) if v is not None else ""
+
+                    # Use content as description - everything after frontmatter
+                    description_start = i + 1
+                    if description_start < len(lines):
+                        # For frontmatter format, everything after the --- is the description
+                        desc_content = "\n".join(lines[description_start:]).strip()
+                        if desc_content:
+                            info["description"] = desc_content
+                    return info
+            except yaml.YAMLError:
+                pass  # Fall back to old parsing
+    else:
+        # Fallback to old table parsing
+        for line in lines:
+            if line.startswith("# "):
+                # "# L-0001: Title" -> extract key and title
+                heading = line[2:].strip()
+                if ": " in heading:
+                    info["key"], info["title"] = heading.split(": ", 1)
+                else:
+                    info["title"] = heading
+            if "| **" in line and "** |" in line:
+                parts = line.split("|")
+                if len(parts) >= 3:
+                    field = parts[1].strip().strip("*").strip()
+                    value = parts[2].strip()
+                    info[field.lower()] = value
+
+    # Extract description from old format
+    desc = _extract_description(content)
+    if desc:
+        info["description"] = desc
+
     return info
 
 
 def _extract_description(content: str) -> str:
     """Extract the description section from ticket markdown."""
     lines = content.split("\n")
+
+    # Check if this is frontmatter format
+    if lines and lines[0].strip() == "---":
+        # Find the closing ---
+        for i, line in enumerate(lines[1:], 1):
+            if line.strip() == "---":
+                # Everything after the closing --- is the description
+                desc_lines = lines[i + 1 :]
+                return "\n".join(desc_lines).strip()
+
+    # Old format: look for ## Description section first
     in_desc = False
     desc_lines: list[str] = []
     for line in lines:
@@ -211,10 +306,27 @@ def _extract_description(content: str) -> str:
             if line.startswith("## "):
                 break
             desc_lines.append(line)
-    return "\n".join(desc_lines).strip()
+
+    desc = "\n".join(desc_lines).strip()
+    if desc:
+        return desc
+
+    # If no ## Description section, extract everything after the table
+    # Find the end of the table (last |---| line)
+    table_end = -1
+    for i, line in enumerate(lines):
+        if line.strip().startswith("|---"):
+            table_end = i
+
+    if table_end > 0 and table_end + 1 < len(lines):
+        # Everything after the table is description
+        desc_lines = lines[table_end + 1 :]
+        return "\n".join(desc_lines).strip()
+
+    return ""
 
 
-def cmd_ticket_upgrade(offline: bool = False) -> None:
+def cmd_ticket_upgrade(offline: bool = False, structure: bool = False) -> None:
     """Scan local tickets for missing fields and interactively fill them in."""
     project_root = get_project_root()
     if project_root is None:
@@ -222,8 +334,43 @@ def cmd_ticket_upgrade(offline: bool = False) -> None:
         return
 
     local_dir = project_root / "tickets" / "local"
-    if not local_dir.exists() or not any(local_dir.glob("*.md")):
-        console.print("[yellow]No local tickets to upgrade.[/yellow]")
+    if not local_dir.exists():
+        console.print("[yellow]No local tickets directory found.[/yellow]")
+        return
+
+    if structure:
+        # Migrate to new folder structure
+        console.print("[bold]Migrating tickets to new folder-based structure...[/bold]")
+        migrated = 0
+        for item in local_dir.iterdir():
+            if item.is_file() and item.suffix == ".md":
+                # Old format: 0001_title.md -> migrate to 000001_title/ISSUE.md
+                match = re.match(r"^(\d+)_(.+)\.md$", item.name)
+                if match:
+                    num_str, title_part = match.groups()
+                    num = int(num_str)
+                    new_num_str = f"{num:06d}"
+                    new_dirname = f"{new_num_str}_{title_part}"
+                    new_dir = local_dir / new_dirname
+                    new_dir.mkdir(exist_ok=True)
+                    new_file = new_dir / "ISSUE.md"
+
+                    # Read old content and update key if needed
+                    content = item.read_text()
+                    # Update key in content if it's old format
+                    content = re.sub(r'^key: "L-\d{4}"$', f'key: "L-{new_num_str}"', content, flags=re.MULTILINE)
+
+                    new_file.write_text(content)
+                    item.unlink()  # Remove old file
+                    migrated += 1
+                    console.print(f"  Migrated {item.name} -> {new_dirname}/ISSUE.md")
+
+        console.print(f"[green]Migrated {migrated} ticket(s) to new structure.[/green]")
+        return
+
+    ticket_files = _get_ticket_files(local_dir)
+    if not ticket_files:
+        console.print("[yellow]No local tickets found.[/yellow]")
         return
 
     # Fields that every ticket should have
@@ -233,10 +380,9 @@ def cmd_ticket_upgrade(offline: bool = False) -> None:
     upgraded = 0
     skipped = 0
 
-    files = sorted(local_dir.glob("*.md"))
-    console.print(f"[bold]Scanning {len(files)} local ticket(s) for missing fields...[/bold]\n")
+    console.print(f"[bold]Scanning {len(ticket_files)} local ticket(s) for missing fields...[/bold]\n")
 
-    for filepath in files:
+    for filepath in ticket_files:
         content = filepath.read_text()
         info = _parse_local_ticket(content)
         description = _extract_description(content)
@@ -322,7 +468,7 @@ def cmd_ticket_upgrade(offline: bool = False) -> None:
 
     # Stage changed files
     if upgraded:
-        git_stage_files(list(local_dir.glob("*.md")), cwd=project_root)
+        git_stage_files(ticket_files, cwd=project_root)
 
-    already_complete = len(files) - upgraded - skipped
+    already_complete = len(ticket_files) - upgraded - skipped
     console.print(f"[bold]Done:[/bold] {upgraded} upgraded, {skipped} skipped, {already_complete} already complete.")

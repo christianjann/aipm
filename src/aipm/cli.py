@@ -167,6 +167,7 @@ def ticket(obj: dict | None = None) -> None:
 @click.option("--priority", "-p", default="", help="Priority: critical, high, medium, low")
 @click.option("--assignee", "-a", default="", help="Assignee")
 @click.option("--description", "-d", default="", help="Description")
+@click.option("--summary", default="", help="Short summary (used for description queries)")
 @click.option("--labels", "-l", default="", help="Comma-separated labels")
 @click.option("--horizon", "-h", default="", help="Time horizon: now, week, next-week, month, year, sometime")
 @click.option("--due", default="", help="Due date (YYYY-MM-DD)")
@@ -179,6 +180,7 @@ def ticket_add(
     priority: str,
     assignee: str,
     description: str,
+    summary: str,
     labels: str,
     horizon: str,
     due: str,
@@ -193,6 +195,7 @@ def ticket_add(
         priority=priority,
         assignee=assignee,
         description=description,
+        summary=summary,
         labels=labels,
         horizon=horizon,
         due=due,
@@ -211,12 +214,13 @@ def ticket_list(obj: dict | None = None) -> None:
 
 
 @ticket.command("upgrade")
+@click.option("--structure", is_flag=True, default=False, help="Migrate tickets to new folder-based structure")
 @click.pass_obj
-def ticket_upgrade(obj: dict | None = None) -> None:
+def ticket_upgrade(obj: dict | None = None, structure: bool = False) -> None:
     """Upgrade existing tickets by filling in missing fields (horizon, due, etc.)."""
     from aipm.commands.ticket import cmd_ticket_upgrade
 
-    cmd_ticket_upgrade(offline=obj.get("offline", False) if obj else False)
+    cmd_ticket_upgrade(offline=obj.get("offline", False) if obj else False, structure=structure)
 
 
 @main.command()

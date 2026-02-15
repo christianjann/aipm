@@ -31,9 +31,12 @@ def test_ticket_add_creates_file(work_dir: Path) -> None:
     local_dir = work_dir / "tickets" / "local"
     assert local_dir.is_dir()
 
-    md_files = list(local_dir.glob("*.md"))
-    assert len(md_files) == 1
-    assert md_files[0].name.startswith("0001_")
+    # Check for new folder structure: 000001_my_first_ticket/ISSUE.md
+    ticket_dirs = [d for d in local_dir.iterdir() if d.is_dir() and (d / "ISSUE.md").exists()]
+    assert len(ticket_dirs) == 1
+    ticket_dir = ticket_dirs[0]
+    assert ticket_dir.name.startswith("000001_")
+    assert (ticket_dir / "ISSUE.md").exists()
 
 
 def test_ticket_add_sequential_numbering(work_dir: Path) -> None:
@@ -55,10 +58,11 @@ def test_ticket_add_sequential_numbering(work_dir: Path) -> None:
     )
 
     local_dir = work_dir / "tickets" / "local"
-    md_files = sorted(local_dir.glob("*.md"))
-    assert len(md_files) == 2
-    assert md_files[0].name.startswith("0001_")
-    assert md_files[1].name.startswith("0002_")
+    # Check for new folder structure
+    ticket_dirs = sorted([d for d in local_dir.iterdir() if d.is_dir() and (d / "ISSUE.md").exists()])
+    assert len(ticket_dirs) == 2
+    assert ticket_dirs[0].name.startswith("000001_")
+    assert ticket_dirs[1].name.startswith("000002_")
 
 
 def test_ticket_add_content(work_dir: Path) -> None:
@@ -72,15 +76,15 @@ def test_ticket_add_content(work_dir: Path) -> None:
     )
 
     local_dir = work_dir / "tickets" / "local"
-    md_files = list(local_dir.glob("*.md"))
-    assert len(md_files) == 1
+    ticket_dirs = [d for d in local_dir.iterdir() if d.is_dir() and (d / "ISSUE.md").exists()]
+    assert len(ticket_dirs) == 1
 
-    content = md_files[0].read_text()
+    content = (ticket_dirs[0] / "ISSUE.md").read_text()
     assert "Bug in login" in content
     assert "critical" in content
     assert "chris" in content
     assert "Login page crashes" in content
-    assert "L-0001" in content
+    assert "L-000001" in content  # Updated to 6 digits
     assert "local" in content
 
 
@@ -95,7 +99,9 @@ def test_ticket_add_with_labels(work_dir: Path) -> None:
     )
 
     local_dir = work_dir / "tickets" / "local"
-    content = next(iter(local_dir.glob("*.md"))).read_text()
+    ticket_dirs = [d for d in local_dir.iterdir() if d.is_dir() and (d / "ISSUE.md").exists()]
+    assert len(ticket_dirs) == 1
+    content = (ticket_dirs[0] / "ISSUE.md").read_text()
     assert "bug" in content
     assert "frontend" in content
 
@@ -144,9 +150,11 @@ def test_ticket_add_with_horizon_flag(work_dir: Path) -> None:
     assert "now" in result.output
 
     local_dir = work_dir / "tickets" / "local"
-    content = next(iter(local_dir.glob("*.md"))).read_text()
+    ticket_dirs = [d for d in local_dir.iterdir() if d.is_dir() and (d / "ISSUE.md").exists()]
+    assert len(ticket_dirs) == 1
+    content = (ticket_dirs[0] / "ISSUE.md").read_text()
     assert "now" in content
-    assert "Horizon" in content
+    assert "horizon:" in content
 
 
 def test_ticket_add_with_due_date(work_dir: Path) -> None:
@@ -162,9 +170,11 @@ def test_ticket_add_with_due_date(work_dir: Path) -> None:
     assert result.exit_code == 0, result.output
 
     local_dir = work_dir / "tickets" / "local"
-    content = next(iter(local_dir.glob("*.md"))).read_text()
+    ticket_dirs = [d for d in local_dir.iterdir() if d.is_dir() and (d / "ISSUE.md").exists()]
+    assert len(ticket_dirs) == 1
+    content = (ticket_dirs[0] / "ISSUE.md").read_text()
     assert "2025-07-15" in content
-    assert "Due" in content
+    assert "due:" in content
 
 
 def test_ticket_add_default_horizon_is_sometime(work_dir: Path) -> None:
@@ -178,7 +188,9 @@ def test_ticket_add_default_horizon_is_sometime(work_dir: Path) -> None:
     )
 
     local_dir = work_dir / "tickets" / "local"
-    content = next(iter(local_dir.glob("*.md"))).read_text()
+    ticket_dirs = [d for d in local_dir.iterdir() if d.is_dir() and (d / "ISSUE.md").exists()]
+    assert len(ticket_dirs) == 1
+    content = (ticket_dirs[0] / "ISSUE.md").read_text()
     assert "sometime" in content
 
 
@@ -237,7 +249,7 @@ def test_ticket_upgrade_adds_missing_horizon(work_dir: Path) -> None:
 
     # Verify the file now has horizon
     updated = (local_dir / "0001_old_ticket.md").read_text()
-    assert "Horizon" in updated
+    assert "horizon:" in updated
     assert "week" in updated
 
 

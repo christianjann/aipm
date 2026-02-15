@@ -28,13 +28,16 @@ def create_source(config: SourceConfig) -> IssueSource:
 
 
 def write_ticket_file(ticket: Ticket, tickets_dir: Path) -> Path:
-    """Write a ticket to a markdown file, return the file path."""
+    """Write a ticket to a folder with ISSUE.md file, return the folder path."""
     sanitized = sanitize_name(ticket.title)
-    # Use the key in the filename (remove special chars like #)
+    # Use the key in the folder name (remove special chars like #)
     key_clean = ticket.key.replace("#", "").replace("/", "_")
-    filename = f"{key_clean}_{sanitized}.md"
+    folder_name = f"{key_clean}_{sanitized}"
 
-    filepath = tickets_dir / filename
+    folder_path = tickets_dir / folder_name
+    folder_path.mkdir(exist_ok=True)
+
+    issue_file = folder_path / "ISSUE.md"
 
     content = format_markdown_ticket(
         key=ticket.key,
@@ -49,8 +52,8 @@ def write_ticket_file(ticket: Ticket, tickets_dir: Path) -> Path:
         extra_fields=ticket.extra_fields,
     )
 
-    filepath.write_text(content)
-    return filepath
+    issue_file.write_text(content)
+    return folder_path
 
 
 def cmd_sync(offline: bool = False) -> None:

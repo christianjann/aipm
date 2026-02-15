@@ -87,9 +87,9 @@ Horizon: week
 Due date (YYYY-MM-DD, optional):
 Assignee (optional):
 
-Created ticket: L-0001 — Set up CI pipeline
+Created ticket: L-000001 — Set up CI pipeline
   Horizon: week
-  File: tickets/local/0001_set_up_ci_pipeline.md
+  File: tickets/local/000001_set_up_ci_pipeline/ISSUE.md
 ```
 
 ### One-liner mode
@@ -129,14 +129,14 @@ aipm ticket list
 
 ```
               Local Tickets
-┌────────┬──────────────────────┬────────┬─────────┬─────┬──────────┬──────────┐
-│ Key    │ Title                │ Status │ Horizon │ Due │ Priority │ Assignee │
-├────────┼──────────────────────┼────────┼─────────┼─────┼──────────┼──────────┤
-│ L-0001 │ Set up CI pipeline   │ open   │ week    │     │ medium   │          │
-│ L-0002 │ Fix login crash      │ open   │ now     │     │ critical │          │
-│ L-0003 │ Write API docs       │ open   │ month   │     │ low      │          │
-│ L-0004 │ Refactor auth module │ open   │ sometime│     │ medium   │          │
-└────────┴──────────────────────┴────────┴─────────┴─────┴──────────┴──────────┘
+┌──────────┬──────────────────────┬────────┬─────────┬─────┬──────────┬──────────┐
+│ Key      │ Title                │ Status │ Horizon │ Due │ Priority │ Assignee │
+├──────────┼──────────────────────┼────────┼─────────┼─────┼──────────┼──────────┤
+│ L-000001 │ Set up CI pipeline   │ open   │ week    │     │ medium   │          │
+│ L-000002 │ Fix login crash      │ open   │ now     │     │ critical │          │
+│ L-000003 │ Write API docs       │ open   │ month   │     │ low      │          │
+│ L-000004 │ Refactor auth module │ open   │ sometime│     │ medium   │          │
+└──────────┴──────────────────────┴────────┴─────────┴─────┴──────────┴──────────┘
 ```
 
 Each ticket is a plain Markdown file — open any of them in your editor and

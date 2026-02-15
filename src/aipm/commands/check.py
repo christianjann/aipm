@@ -57,8 +57,48 @@ def _parse_all_tickets(project_root: Path) -> list[dict[str, str]]:
 def _parse_ticket_file(filepath: Path) -> dict[str, str]:
     """Parse a ticket markdown file into a dict of fields."""
     content = filepath.read_text()
+    lines = content.split("\n")
     info: dict[str, str] = {}
 
+    # Check if it starts with front matter
+    if lines and lines[0] == "---":
+        # Parse YAML front matter
+        front_matter_lines = []
+        i = 1
+        while i < len(lines) and lines[i] != "---":
+            front_matter_lines.append(lines[i])
+            i += 1
+
+        if front_matter_lines:
+            import yaml
+
+            try:
+                front_matter = yaml.safe_load("\n".join(front_matter_lines))
+                if isinstance(front_matter, dict):
+                    # Convert all values to strings, handle lists
+                    for k, v in front_matter.items():
+                        if isinstance(v, list):
+                            info[k] = ", ".join(str(item) for item in v)
+                        else:
+                            info[k] = str(v) if v is not None else ""
+
+                    # Use content as description
+                    description_start = i + 1
+                    if description_start < len(lines):
+                        desc_lines = []
+                        in_description = False
+                        for line in lines[description_start:]:
+                            if line.startswith("## Description"):
+                                in_description = True
+                                continue
+                            if in_description:
+                                desc_lines.append(line)
+                        info["description"] = "\n".join(desc_lines).strip()
+                    return info
+            except yaml.YAMLError:
+                pass  # Fall back to old parsing
+
+    # Fallback to old table parsing
     for line in content.split("\n"):
         if line.startswith("# "):
             heading = line[2:].strip()
@@ -100,14 +140,29 @@ def _analysis_suggests_done(analysis: str) -> bool:
 
 def _update_ticket_status(ticket_path: Path, new_status: str) -> None:
     """Update the Status field in a ticket markdown file."""
-    content = ticket_path.read_text()
-    # Replace the status row in the markdown table
-    updated = re.sub(
-        r"(\|\s*\*\*Status\*\*\s*\|)\s*[^|]+(\|)",
-        rf"\1 {new_status} \2",
-        content,
+    from aipm.utils import format_markdown_ticket
+
+    # Parse the current ticket
+    ticket_data = _parse_ticket_file(ticket_path)
+    ticket_data["status"] = new_status
+
+    # Rewrite the file
+    content = format_markdown_ticket(
+        key=ticket_data.get("key", ""),
+        title=ticket_data.get("title", ""),
+        status=ticket_data.get("status", "open"),
+        assignee=ticket_data.get("assignee", ""),
+        priority=ticket_data.get("priority", "medium"),
+        labels=ticket_data.get("labels", "").split(", ") if ticket_data.get("labels") else None,
+        description=ticket_data.get("description", ""),
+        summary=ticket_data.get("summary", ""),
+        url=ticket_data.get("url", ""),
+        repo=ticket_data.get("repo", ""),
+        source_type=ticket_data.get("source", "local"),
+        horizon=ticket_data.get("horizon", "sometime"),
+        due=ticket_data.get("due", ""),
     )
-    ticket_path.write_text(updated)
+    ticket_path.write_text(content)
 
 
 def _resolve_repo_path(repo: str, project_root: Path) -> Path | None:

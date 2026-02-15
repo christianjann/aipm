@@ -15,7 +15,8 @@ AIPM syncs issues from **Jira** and **GitHub** into a local git-tracked director
 > Learn how automated ticket checking works in [Check](doc/check.md).\
 > See how AI-powered project reports work in [Summary](doc/summary.md).\
 > Troubleshoot Copilot issues with [Debugging](doc/debug.md).\
-> Extend AIPM with custom [Skills](doc/skills.md).
+> Extend AIPM with custom [Skills](doc/skills.md).\
+> Learn about the [Ticket Format](doc/format.md) and directory structure.
 
 ---
 
@@ -213,7 +214,7 @@ aipm ticket add -t "Add CI pipeline" --horizon week --repo /path/to/project
 aipm check
 
 # Check a specific ticket
-aipm check L-0001
+aipm check L-000001
 
 # Urgent items only
 aipm summary day
@@ -237,16 +238,22 @@ After you run `aipm init`, add tickets, and generate reports, your workspace wil
 ```
 my-project/
 ├── aipm.toml          # Project configuration and source definitions
-├── tickets/           # Synced issue tickets (one .md per issue)
+├── tickets/           # Synced issue tickets (one folder per issue)
 │   ├── local/         # Local-only tickets
-│   │   ├── 0001_setup_ci.md
-│   │   └── 0002_write_docs.md
-│   ├── PROJ/          # Jira source
-│   │   ├── PROJ-1_implement_feature.md
-│   │   └── PROJ-2_fix_bug.md
-│   └── repo/          # GitHub source
-│       ├── 42_add_readme.md
-│       └── 87_refactor_api.md
+│   │   ├── 000001_setup_ci/
+│   │   │   └── ISSUE.md
+│   │   └── 000002_write_docs/
+│   │       └── ISSUE.md
+│   ├── MYPROJ/        # Jira source named "MYPROJ"
+│   │   ├── MYPROJ-1_implement_feature/
+│   │   │   └── ISSUE.md
+│   │   └── MYPROJ-2_fix_bug/
+│   │       └── ISSUE.md
+│   └── myrepo/        # GitHub source named "myrepo"
+│       ├── 42_add_readme/
+│       │   └── ISSUE.md
+│       └── 87_refactor_api/
+│           └── ISSUE.md
 ├── milestones.md      # Project milestones grouped by horizon
 ├── goals.md           # Project goals
 ├── generated/         # Generated reports (summaries, plan) — configurable via `output_dir` in `aipm.toml`

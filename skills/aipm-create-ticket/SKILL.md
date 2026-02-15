@@ -3,7 +3,7 @@ name: aipm-create-ticket
 description: Create a new ticket using AIPM — The AI Project Manager
 ---
 
-This skill creates a new local ticket in an AIPM project. The ticket will be saved as a Markdown file in the `tickets/local/` directory with an auto-generated sequential number (e.g., `0001_fix_bug.md`).
+This skill creates a new local ticket in an AIPM project. The ticket will be saved as a Markdown file in the `tickets/local/` directory with an auto-generated sequential number (e.g., `000001_fix_bug/ISSUE.md`).
 
 ## Usage
 
