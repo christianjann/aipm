@@ -2,7 +2,7 @@
 assignee: claude
 due: '2025-02-13'
 horizon: now
-key: L-0004
+key: L-000004
 priority: high
 repo: .
 source: local

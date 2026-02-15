@@ -1,7 +1,7 @@
 ---
 assignee: chris
 horizon: week
-key: L-0007
+key: L-000007
 priority: medium
 repo: .
 source: local

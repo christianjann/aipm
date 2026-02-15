@@ -1,7 +1,7 @@
 ---
 assignee: claude
 horizon: week
-key: L-0003
+key: L-000003
 priority: high
 repo: .
 source: local

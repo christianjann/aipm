@@ -1,6 +1,6 @@
 ---
 horizon: year
-key: L-0005
+key: L-000005
 priority: medium
 repo: .
 source: local
