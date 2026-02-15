@@ -56,8 +56,12 @@ fmt-check:
 typecheck:
     uv run ty check src/
 
-# Run all checks (lint + format check + typecheck + tests)
-check: lint fmt-check typecheck test
+# Audit dependencies for vulnerabilities
+audit:
+    uv run pip-audit
+
+# Run all checks (lint + format check + typecheck + audit + tests)
+check: lint fmt-check typecheck audit test
 
 # Clean build artifacts and caches
 clean:
