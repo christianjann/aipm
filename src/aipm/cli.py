@@ -146,6 +146,15 @@ def commit(obj: dict | None = None) -> None:
     cmd_commit(offline=obj.get("offline", False) if obj else False)
 
 
+@main.command()
+@click.pass_obj
+def upgrade(obj: dict | None = None) -> None:
+    """Upgrade existing tickets by filling in missing fields."""
+    from aipm.commands.upgrade import cmd_upgrade
+
+    cmd_upgrade(offline=obj.get("offline", False) if obj else False)
+
+
 @main.group()
 @click.pass_obj
 def ticket(obj: dict | None = None) -> None:

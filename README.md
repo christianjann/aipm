@@ -161,6 +161,7 @@ Commands:
   summary  Generate a high-level project summary.
   sync     Sync issues from all configured sources to the tickets directory.
   ticket   Manage local tickets.
+  upgrade  Upgrade existing tickets by filling in missing fields.
 </pre>
 
 </td></tr></table>
@@ -177,6 +178,7 @@ Commands:
 | `aipm ticket add` | Create a local ticket (interactive or via flags `-t`, `-p`, `-a`, `-d`, `-l`, `--horizon`, `--due`, `--repo`) |
 | `aipm ticket list` | List all local tickets in a table |
 | `aipm ticket upgrade` | Scan existing tickets and interactively fill in missing fields (horizon, priority, etc.) |
+| `aipm upgrade` | Upgrade existing tickets by filling in missing fields interactively |
 | `aipm report` | Generate all reports (summaries + project plan) under the configured output directory |
 | `aipm report -f md` | Generate Markdown reports only |
 | `aipm report -f html` | Generate HTML reports only |

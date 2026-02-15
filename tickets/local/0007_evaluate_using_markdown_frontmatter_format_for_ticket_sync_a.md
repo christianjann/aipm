@@ -6,6 +6,8 @@
 | **Horizon** | week |
 | **Priority** | medium |
 | **Source** | local |
+| **Assignee** | chris |
+| **Repo** | . |
 
 ## Description
 
