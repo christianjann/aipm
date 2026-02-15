@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import click
@@ -28,7 +29,17 @@ def cmd_upgrade(offline: bool = False, structure: bool = False) -> None:
 
     tickets_upgraded = 0
 
-    for ticket_file in sorted(local_dir.glob("*.md")):
+    # Get all ticket files (both old flat format and new directory format)
+    ticket_files = []
+    for item in local_dir.iterdir():
+        if item.is_file() and item.suffix == ".md":
+            # Old format
+            ticket_files.append(item)
+        elif item.is_dir() and (item / "ISSUE.md").exists():
+            # New format
+            ticket_files.append(item / "ISSUE.md")
+
+    for ticket_file in sorted(ticket_files):
         ticket_data = _parse_ticket(ticket_file)
         if not ticket_data:
             continue
@@ -39,14 +50,19 @@ def cmd_upgrade(offline: bool = False, structure: bool = False) -> None:
 
         missing_fields = _get_missing_fields(ticket_data)
 
+        # Check if key needs updating based on filename
+        key_from_filename = _get_key_from_filename(ticket_file)
+        current_key = ticket_data.get("key", "")
+        key_needs_update = key_from_filename and key_from_filename != current_key
+
         # Determine if we should upgrade this ticket
-        should_upgrade = True if structure else bool(missing_fields) or not is_frontmatter
+        should_upgrade = True if structure else bool(missing_fields) or not is_frontmatter or key_needs_update
 
         if not should_upgrade:
             continue
 
         console.print(f"\n[bold]Ticket: {ticket_data.get('title', ticket_file.stem)}[/bold]")
-        console.print(f"File: {ticket_file.name}")
+        console.print(f"File: {ticket_file.relative_to(project_root)}")
 
         if structure:
             console.print("[dim]Upgrading to new directory structure...[/dim]")
@@ -64,6 +80,15 @@ def cmd_upgrade(offline: bool = False, structure: bool = False) -> None:
             tickets_upgraded += 1
             console.print(f"[green]Upgraded {ticket_file.name}[/green]")
             continue
+
+        # Update key if needed
+        if key_needs_update:
+            console.print(
+                f"[yellow]Key mismatch: file suggests '{key_from_filename}', ticket has '{current_key}'[/yellow]"
+            )
+            if click.confirm(f"Update key to '{key_from_filename}'?", default=True):
+                ticket_data["key"] = key_from_filename
+                console.print(f"[dim]Updated key: {current_key} → {key_from_filename}[/dim]")
 
         # Prompt for missing fields
         for field in missing_fields:
@@ -215,6 +240,10 @@ def _upgrade_directory_structure(ticket_file: Path, ticket_data: dict[str, str])
     # Zero-pad to 6 digits
     padded_number = f"{int(number_part):06d}"
 
+    # Update the key to use the new format
+    new_key = f"L-{padded_number}"
+    ticket_data["key"] = new_key
+
     # Sanitize title
     title = ticket_data.get("title", "")
     sanitized_title = sanitize_name(title, max_length=60)
@@ -230,7 +259,11 @@ def _upgrade_directory_structure(ticket_file: Path, ticket_data: dict[str, str])
     new_file = ticket_dir / "ISSUE.md"
     ticket_file.rename(new_file)
 
+    # Update the ticket file with the new key
+    _update_ticket_file(new_file, ticket_data)
+
     console.print(f"[dim]Moved to directory: {dir_name}/ISSUE.md[/dim]")
+    console.print(f"[dim]Updated key: {key} → {new_key}[/dim]")
 
 
 def _update_ticket_file(ticket_file: Path, ticket_data: dict[str, str]) -> None:
@@ -267,3 +300,26 @@ def _update_ticket_file(ticket_file: Path, ticket_data: dict[str, str]) -> None:
         content = content.rstrip("\n")
 
     ticket_file.write_text(content)
+
+
+def _get_key_from_filename(ticket_file: Path) -> str | None:
+    """Extract the expected ticket key from the filename/directory name."""
+    # For files in directory structure: 000001_title/ISSUE.md
+    if ticket_file.name == "ISSUE.md" and ticket_file.parent.is_dir():
+        dir_name = ticket_file.parent.name
+        # Extract number from directory name (e.g., "000001" from "000001_title")
+        number_match = re.match(r"^(\d+)", dir_name)
+        if number_match:
+            number = int(number_match.group(1))
+            return f"L-{number:06d}"
+
+    # For flat files: 0001_title.md
+    elif ticket_file.is_file() and ticket_file.suffix == ".md":
+        file_name = ticket_file.name
+        # Extract number from filename (e.g., "0001" from "0001_title.md")
+        number_match = re.match(r"^(\d+)", file_name)
+        if number_match:
+            number = int(number_match.group(1))
+            return f"L-{number:06d}"
+
+    return None

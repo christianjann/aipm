@@ -37,8 +37,8 @@ def test_upgrade_converts_to_yaml_and_preserves_description(work_dir: Path) -> N
 
     runner = CliRunner()
     # Should upgrade even though all fields are present (because it's old format)
-    # Provide input: y to upgrade, empty for assignee, empty for due
-    result = runner.invoke(main, ["upgrade"], input="y\n\n\n")
+    # Provide input: y to upgrade, y to update key, empty for assignee, empty for due
+    result = runner.invoke(main, ["upgrade"], input="y\n\n\n\n")
 
     assert result.exit_code == 0, result.output
 
